@@ -1,0 +1,319 @@
+<%- include('partials/header') %>
+
+<div class="text-sm breadcrumbs text-gray-500 mb-6">
+    <a href="/" class="hover:text-blue-600">Home</a> 
+    <span class="mx-2">/</span> 
+    <span class="text-gray-700">Detail Result</span>
+    <span class="mx-2">/</span>
+    <span class="font-medium text-gray-900"><%= book.title %></span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- KOLOM KIRI: COVER (3/12) -->
+    <div class="lg:col-span-3">
+        <div class="bg-white p-2 border border-gray-300 shadow-sm inline-block w-full">
+            <div class="w-full aspect-[3/4] border border-gray-200 flex flex-col items-center justify-center text-gray-300 bg-gray-50">
+                <h1 class="text-2xl font-serif text-gray-400 text-center leading-tight mb-2">SAMPUL<br>BELUM<br>TERSEDIA</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- KOLOM TENGAH: DETAIL & PETA (6/12) -->
+    <div class="lg:col-span-6 space-y-8">
+        
+        <!-- Tabel Detail Buku -->
+        <div>
+            <!-- Header Actions -->
+            <div class="flex justify-center md:justify-end gap-4 text-xs font-bold text-red-500 mb-4">
+                <a href="#" class="hover:underline flex items-center"><i class="fas fa-cog mr-1"></i> Cite This</a>
+                <a href="#" class="hover:underline flex items-center"><i class="fas fa-shopping-cart mr-1"></i> Tampung</a>
+                <a href="#" class="hover:underline text-blue-600 flex items-center"><i class="fas fa-share-square mr-1"></i> Export Record</a>
+            </div>
+
+            <!-- TABEL DATA BUKU -->
+            <div class="bg-white border-t-2 border-blue-600 shadow-sm">
+                <table class="w-full text-sm text-left">
+                    <tbody>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600 w-1/3">Kategori</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.category %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Judul</td>
+                            <td class="px-4 py-2 font-bold text-gray-900"><%= book.title %></td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Judul Asli</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.original_title || '-' %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Pengarang</td>
+                            <td class="px-4 py-2">
+                                <span class="text-gray-800 block"><%= book.author %> (penulis)</span>
+                                <% if(book.additional_author) { %>
+                                    <span class="text-gray-800 block"><%= book.additional_author %></span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Edisi</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.edition || '-' %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Pernyataan Seri</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.series_title || '-' %></td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Penerbitan</td>
+                            <td class="px-4 py-2 text-gray-800">
+                                <%= book.publish_place || '[Tempat tidak diketahui]' %> : 
+                                <%= book.publisher || '[Penerbit tidak diketahui]' %>, 
+                                <%= book.publish_year %>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Deskripsi Fisik</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.physical_description || '-' %></td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Jenis Isi</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.content_type %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Jenis Media</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.media_type %></td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Jenis Wadah</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.carrier_type %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">ISBN</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.isbn || '-' %></td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Subjek</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.subject || '-' %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600 align-top">Abstrak</td>
+                            <td class="px-4 py-2 text-gray-800 text-justify leading-relaxed">
+                                <%= book.abstract || '-' %>
+                            </td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Catatan</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.notes || '-' %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Bahasa</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.language %></td>
+                        </tr>
+                        <tr class="bg-blue-50/50 border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Bentuk Karya</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.work_type %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Target Pembaca</td>
+                            <td class="px-4 py-2 text-gray-800"><%= book.target_audience %></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="px-4 py-2 font-semibold text-gray-600">Stok</td>
+                            <td class="px-4 py-2 text-gray-800">
+                                <%= book.stock_available %> tersedia dari total <%= book.stock_total %> eks.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PETA LOKASI RAK (GRID LAYOUT FIX) -->
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+            <div class="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-700 flex items-center">
+                    <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i> Peta Lokasi Rak
+                </h3>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-bold">Rak <%= book.shelf_location || 'Umum' %></span>
+            </div>
+            
+            <div class="p-6 bg-slate-50 relative min-h-[350px]">
+                <!-- Pintu Masuk (Absolute) -->
+                <div class="absolute top-4 left-4 border-2 border-gray-400 bg-white px-2 py-1 text-[10px] font-bold text-gray-500 uppercase z-10 shadow-sm">
+                    Pintu Masuk
+                </div>
+
+                <!-- Container Grid Utama (Diberi margin top besar agar tidak tertutup Pintu Masuk) -->
+                <div class="mt-16 max-w-lg mx-auto flex flex-col gap-6">
+                    
+                    <!-- Baris A (Grid 3 Kolom) -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 font-bold shadow-sm transition-all
+                            <%= book.shelf_location === 'A1' ? 'bg-blue-600 border-blue-700 text-white animate-pulse ring-4 ring-blue-200' : '' %>">
+                            Rak A1
+                        </div>
+                        <div class="h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 font-bold shadow-sm transition-all
+                            <%= book.shelf_location === 'A2' ? 'bg-blue-600 border-blue-700 text-white animate-pulse ring-4 ring-blue-200' : '' %>">
+                            Rak A2
+                        </div>
+                        <div class="h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 font-bold shadow-sm transition-all
+                            <%= book.shelf_location === 'A3' ? 'bg-blue-600 border-blue-700 text-white animate-pulse ring-4 ring-blue-200' : '' %>">
+                            Rak A3
+                        </div>
+                    </div>
+
+                    <!-- Lorong Utama -->
+                    <div class="h-8 flex items-center justify-center">
+                        <span class="text-xs font-bold text-gray-300 tracking-[0.4em] uppercase">Lorong Utama</span>
+                    </div>
+
+                    <!-- Baris B (Grid 3 Kolom) -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 font-bold shadow-sm transition-all
+                            <%= book.shelf_location === 'B1' ? 'bg-blue-600 border-blue-700 text-white animate-pulse ring-4 ring-blue-200' : '' %>">
+                            Rak B1
+                        </div>
+                        <div class="h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 font-bold shadow-sm transition-all
+                            <%= book.shelf_location === 'B2' ? 'bg-blue-600 border-blue-700 text-white animate-pulse ring-4 ring-blue-200' : '' %>">
+                            Rak B2
+                        </div>
+                        <div class="h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 font-bold shadow-sm transition-all
+                            <%= book.shelf_location === 'B3' ? 'bg-blue-600 border-blue-700 text-white animate-pulse ring-4 ring-blue-200' : '' %>">
+                            Rak B3
+                        </div>
+                    </div>
+
+                    <!-- Area Baca -->
+                    <div class="mt-2 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                        <span class="text-gray-400 text-xs font-bold flex items-center">
+                            <i class="fas fa-chair mr-2"></i> AREA BACA
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-6 text-center text-xs text-gray-500 italic">
+                    *Lokasi buku ditandai dengan kotak berwarna biru yang berkedip.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KOLOM KANAN: QR CODE & KARYA TERKAIT (3/12) -->
+    <div class="lg:col-span-3 space-y-6">
+        
+        <!-- WIDGET QR CODE -->
+        <div class="bg-white border border-blue-200 rounded overflow-hidden shadow-sm">
+            <div class="bg-blue-50 px-3 py-2 border-b border-blue-100">
+                <h4 class="text-sm font-bold text-blue-800 flex items-center">
+                    <i class="fas fa-qrcode mr-2"></i> Simpan Info Buku
+                </h4>
+            </div>
+            <div class="p-4 flex flex-col items-center text-center">
+                <div class="bg-white p-2 border rounded mb-3">
+                    <% if (typeof qrImage !== 'undefined' && qrImage) { %>
+                        <img src="<%= qrImage %>" alt="QR Code" class="w-32 h-32 block mx-auto">
+                    <% } else { %>
+                        <div class="w-32 h-32 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                            QR Error
+                        </div>
+                    <% } %>
+                </div>
+                <p class="text-xs text-gray-600 mb-3 leading-relaxed">
+                    Scan untuk menyimpan<br>Judul & No. Panggil.
+                </p>
+                <button onclick="window.print()" class="w-full text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded border border-gray-300 transition flex items-center justify-center font-medium">
+                    <i class="fas fa-print mr-2"></i> Cetak Slip
+                </button>
+            </div>
+        </div>
+
+        <!-- WIDGET KARYA TERKAIT -->
+        <div class="bg-white border border-gray-300 rounded overflow-hidden shadow-sm">
+            <div class="bg-blue-800 text-white px-3 py-2 font-bold text-sm flex justify-between">
+                <span>Karya Terkait</span>
+                <i class="fas fa-chevron-up"></i>
+            </div>
+            <div class="divide-y divide-gray-200">
+                <% if(relatedBooks.length > 0) { %>
+                    <% relatedBooks.forEach(rel => { %>
+                        <div class="p-3 hover:bg-gray-50 text-sm group">
+                            <a href="/book/<%= rel.id %>" class="text-blue-700 group-hover:underline block mb-1 leading-tight font-medium"><%= rel.title %></a>
+                            <span class="text-gray-500 text-xs block"><%= rel.author %></span>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="p-4 text-xs text-gray-500 text-center italic">Tidak ada karya terkait.</div>
+                <% } %>
+                <div class="p-2 bg-gray-50 text-right border-t border-gray-200">
+                    <a href="#" class="text-xs text-blue-600 hover:underline font-medium">Lihat lebih banyak..</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TAB BAGIAN BAWAH -->
+<div class="mt-8">
+    <div class="flex border-b border-gray-200 gap-1 overflow-x-auto">
+        <button class="px-5 py-2 text-sm text-red-500 border border-gray-200 border-b-white bg-white font-medium rounded-t relative top-[1px] whitespace-nowrap">
+            Eksemplar
+        </button>
+        <button class="px-5 py-2 text-sm text-red-500 hover:bg-gray-50 font-medium whitespace-nowrap">Konten Digital</button>
+        <button class="px-5 py-2 text-sm text-red-500 hover:bg-gray-50 font-medium whitespace-nowrap">MARC</button>
+        <button class="px-5 py-2 text-sm text-red-500 hover:bg-gray-50 font-medium flex items-center whitespace-nowrap">
+            Unduh Katalog <i class="fas fa-caret-down ml-1"></i>
+        </button>
+    </div>
+    
+    <div class="border border-gray-200 p-6 bg-white shadow-sm mt-[-1px]">
+        <!-- Search Bar Eksemplar -->
+        <div class="flex flex-col sm:flex-row justify-end mb-4 gap-2">
+            <select class="border border-gray-300 rounded text-sm p-1.5 text-gray-600 focus:outline-none focus:border-blue-500">
+                <option>Nomor Barcode</option>
+                <option>No. Panggil</option>
+            </select>
+            <div class="flex">
+                <input type="text" class="border border-gray-300 border-r-0 rounded-l p-1.5 text-sm w-40 focus:outline-none focus:border-blue-500">
+                <button class="bg-gray-50 border border-gray-300 rounded-r px-3 text-sm text-gray-600 hover:bg-gray-100">Cari</button>
+            </div>
+        </div>
+
+        <!-- Tabel Eksemplar -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left border border-gray-200 min-w-[600px]">
+                <thead class="bg-gray-50 text-blue-800 font-bold border-b border-gray-200">
+                    <tr>
+                        <th class="p-3 border-r">No. Barcode</th>
+                        <th class="p-3 border-r">No. Panggil</th>
+                        <th class="p-3 border-r">Akses</th>
+                        <th class="p-3 border-r">Lokasi</th>
+                        <th class="p-3">Ketersediaan</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-blue-50/20">
+                    <tr>
+                        <td class="p-3 border-r text-blue-800 font-mono">B00<%= book.id %>123</td>
+                        <td class="p-3 border-r text-gray-700 font-mono font-bold"><%= book.call_number %></td>
+                        <td class="p-3 border-r text-gray-700">Baca di tempat</td>
+                        <td class="p-3 border-r text-gray-700">
+                            <span class="block font-medium">Perpustakaan Pusat</span>
+                            <span class="text-xs text-gray-500">Koleksi Referensi</span>
+                        </td>
+                        <td class="p-3 text-gray-700">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Tersedia
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-4 text-right text-xs text-gray-500 border-t pt-2">
+            Halaman ke-1 dari 1 (1 data)
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

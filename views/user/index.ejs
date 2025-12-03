@@ -1,0 +1,206 @@
+<%- include('partials/header') %>
+
+<!-- Tom Select CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+
+<div class="flex flex-col md:flex-row gap-8">
+
+    <!-- SIDEBAR FILTER (Kiri) -->
+    <aside class="w-full md:w-3/12 space-y-6">
+        <!-- Panel Filter -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 relative p-4">
+            <div class="bg-blue-800 text-white px-4 py-3 font-bold text-sm rounded-t-lg mb-4">
+                <i class="fas fa-filter mr-2"></i> Persempit Pencarian
+            </div>
+
+            <form action="/search" method="GET" id="filterForm" class="space-y-4">
+                <input type="hidden" name="q" value="<%= query.q || '' %>">
+                <input type="hidden" name="searchBy" value="<%= query.searchBy || 'title' %>">
+                <input type="hidden" name="matchType" value="<%= query.matchType || 'contains' %>">
+
+                <div>
+                    <label for="categorySelect" class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Jenis Bahan</label>
+                    <select name="category" id="categorySelect" class="w-full text-sm border-gray-300 rounded focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">Semua Kategori</option>
+                        <% sidebarData.categories.forEach(item => { %>
+                            <option value="<%= item.id %>" <%= query.category == item.id ? 'selected' : '' %>><%= item.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="yearSelect" class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Tahun Terbit</label>
+                    <select name="year" id="yearSelect" class="w-full text-sm border-gray-300 rounded focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">Semua Tahun</option>
+                        <% sidebarData.years.forEach(item => { %>
+                            <option value="<%= item.year %>" <%= query.year == item.year ? 'selected' : '' %>><%= item.year %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold mt-2">Terapkan Filter</button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="w-full md:w-9/12">
+
+        <!-- ADVANCED SEARCH -->
+        <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-search text-blue-600 mr-2"></i> Pencarian Koleksi
+            </h2>
+            
+            <form action="/search" method="GET" class="flex flex-col gap-3">
+                <div class="flex flex-col md:flex-row md:flex-nowrap gap-2">
+                    <!-- Input Kata Kunci -->
+                    <div class="flex-grow min-w-0">
+                        <input type="text" name="q" value="<%= query.q || '' %>"
+                            class="w-full p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Kata Kunci...">
+                    </div>
+
+                    <!-- Pilih Ruas -->
+                    <div class="md:w-1/5 min-w-0">
+                        <select name="searchBy" class="w-full p-2.5 bg-white border border-gray-300 rounded">
+                            <option value="title" <%= query.searchBy === 'title' ? 'selected' : '' %>>Judul</option>
+                            <option value="author" <%= query.searchBy === 'author' ? 'selected' : '' %>>Pengarang</option>
+                            <option value="publisher" <%= query.searchBy === 'publisher' ? 'selected' : '' %>>Penerbit</option>
+                            <option value="isbn" <%= query.searchBy === 'isbn' ? 'selected' : '' %>>ISBN</option>
+                            <option value="subject" <%= query.searchBy === 'subject' ? 'selected' : '' %>>Subjek</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipe Pencocokan -->
+                    <div class="md:w-1/5 min-w-0">
+                        <select name="matchType" class="w-full p-2.5 bg-white border border-gray-300 rounded">
+                            <option value="contains" <%= query.matchType === 'contains' ? 'selected' : '' %>>Default (Salah Satu Isi)</option>
+                            <option value="startsWith" <%= query.matchType === 'startsWith' ? 'selected' : '' %>>Dimulai Dengan</option>
+                            <option value="endsWith" <%= query.matchType === 'endsWith' ? 'selected' : '' %>>Diakhiri Dengan</option>
+                            <option value="exact" <%= query.matchType === 'exact' ? 'selected' : '' %>>Tepat</option>
+                        </select>
+                    </div>
+
+                    <!-- Tombol Cari -->
+                    <div class="min-w-0">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded font-bold w-full md:w-auto">Cari</button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="mt-3 flex gap-4 text-xs text-gray-500">
+                <a href="/" class="hover:text-blue-600"><i class="fas fa-undo mr-1"></i> Reset Pencarian</a>
+            </div>
+        </div>
+
+        <!-- LIST BUKU -->
+        <div class="space-y-4">
+            <% if (books.length > 0) { %>
+                <% books.forEach(book => { %>
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-md transition flex flex-col sm:flex-row gap-4 group">
+                        <!-- Cover -->
+                        <div class="w-24 h-32 bg-gray-100 rounded border flex flex-col justify-center items-center">
+                            <i class="fas fa-book text-3xl mb-1"></i>
+                            <span class="text-[9px] text-center">SAMPUL BELUM TERSEDIA</span>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-grow text-sm">
+                            <h4 class="text-base font-bold text-blue-700 group-hover:underline cursor-pointer"
+                                onclick="window.location.href='/book/<%= book.id %>'">
+                                <%= book.title %>
+                            </h4>
+                            <div class="grid grid-cols-1 gap-y-1 text-gray-600">
+                                <div class="grid grid-cols-[100px_1fr]">
+                                    <span class="font-semibold">Kategori</span>
+                                    <span>: <%= book.Category ? book.Category.name : '-' %></span>
+                                </div>
+                                <div class="grid grid-cols-[100px_1fr]">
+                                    <span class="font-semibold">Pengarang</span>
+                                    <span>: <%= book.Authors.map(a => a.name).join(", ") %></span>
+                                </div>
+                                <div class="grid grid-cols-[100px_1fr]">
+                                    <span class="font-semibold">Penerbitan</span>
+                                    <span>: <%= book.publish_place %> : <%= book.Publishers.map(p => p.name).join(", ") %>, <%= book.publish_year %></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stock -->
+                        <div class="sm:text-right sm:w-40 border-t sm:border-l sm:border-t-0 border-gray-100 sm:pl-4 pt-3 sm:pt-0">
+                            <span class="text-xs font-semibold text-gray-500">Ketersediaan</span>
+                            <div class="text-xs text-blue-600 font-medium">
+                                <%= book.stock_available %> dari <%= book.stock_total %> eks.
+                            </div>
+
+                            <div class="mt-2">
+                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded border">
+                                    <%= book.call_number %>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div class="p-10 text-center bg-gray-50 border border-dashed border-gray-300 rounded">
+                    <p class="text-gray-500 font-medium">Data tidak ditemukan.</p>
+                </div>
+            <% } %>
+        </div>
+
+        <!-- PAGINATION -->
+        <% if (totalPages > 1) { %>
+            <div class="mt-8 flex justify-center gap-1">
+                <% for (let i = 1; i <= totalPages; i++) { %>
+                    <a href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&year=<%= query.year %>&page=<%= i %>"
+                        class="px-3 py-1 border rounded text-sm <%= currentPage == i ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' %>">
+                        <%= i %>
+                    </a>
+                <% } %>
+            </div>
+        <% } %>
+
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script>
+    new TomSelect('#categorySelect', {
+        allowEmptyOption: true,
+        placeholder: "Pilih kategori...",
+        dropdownClass: 'z-50 absolute tom-select-dropdown',
+        dropdownParent: 'body',
+        maxItems: 1,
+        onInitialize: function() {
+            this.control_input.style.minWidth = '0';
+        }
+    });
+
+    new TomSelect('#yearSelect', {
+        allowEmptyOption: true,
+        placeholder: "Pilih tahun...",
+        dropdownClass: 'z-50 absolute tom-select-dropdown',
+        dropdownParent: 'body',
+        maxItems: 1,
+        onInitialize: function() {
+            this.control_input.style.minWidth = '0';
+        }
+    });
+</script>
+
+<!-- <style>
+    .tom-select-dropdown {
+        background-color: #ffffff !important;
+        border: 1px solid #d1d5db;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 0.375rem;
+    }
+    /* Jangan biarkan elemen flex wrap karena select panjang */
+    .flex-nowrap > * {
+        min-width: 0;
+    }
+</style> -->
+
+<%- include('partials/footer') %>

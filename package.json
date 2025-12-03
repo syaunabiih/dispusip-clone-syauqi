@@ -1,0 +1,26 @@
+{
+  "name": "sistem-referensi-app",
+  "version": "1.0.0",
+  "description": "Sistem Pencarian Referensi Dispusip",
+  "main": "app.js",
+  "scripts": {
+  "start": "node app.js",
+  "dev": "nodemon app.js",
+  "migrate": "npx sequelize-cli db:migrate",
+  "migrate:undo": "npx sequelize-cli db:migrate:undo",
+  "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",
+  "seed": "npx sequelize-cli db:seed:all",
+  "seed:undo": "npx sequelize-cli db:seed:undo:all"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "qrcode": "^1.5.4",
+    "sequelize": "^6.37.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

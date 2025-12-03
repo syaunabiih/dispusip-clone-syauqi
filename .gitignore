@@ -1,0 +1,10 @@
+node_modules/
+jspm_packages/
+
+logs.lognpm-debug.logyarn-debug.log*yarn-error.log*
+
+pids*.pid*.seed*.pid.lock
+
+.idea.vscode*.suo.ntvs*.njsproj*.sln*.sw?
+
+.DS_StoreThumbs.db
