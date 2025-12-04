@@ -5,7 +5,7 @@ const db = require('./models').sequelize;
 const bookRoutes = require('./routes/bookRoutes');
 
 const app = express();
-const PORT = 3000;
+const PORT = 4000;
 
 // Set View Engine ke EJS
 app.set('view engine', 'ejs');

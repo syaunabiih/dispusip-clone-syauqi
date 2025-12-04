@@ -23,7 +23,6 @@ module.exports = (sequelize, DataTypes) => {
         stock_total: DataTypes.INTEGER,
         stock_available: DataTypes.INTEGER,
         category_id: DataTypes.INTEGER,
-        // Menambahkan kolom image_url (atau bisa dinamakan lain)
         image: { type: DataTypes.STRING, allowNull: true }
     }, {
         timestamps: true,           
