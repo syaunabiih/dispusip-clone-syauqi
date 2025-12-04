@@ -101,9 +101,15 @@
                 <% books.forEach(book => { %>
                     <div class="bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-md transition flex flex-col sm:flex-row gap-4 group">
                         <!-- Cover -->
-                        <div class="w-24 h-32 bg-gray-100 rounded border flex flex-col justify-center items-center">
-                            <i class="fas fa-book text-3xl mb-1"></i>
-                            <span class="text-[9px] text-center">SAMPUL BELUM TERSEDIA</span>
+                        <div class="w-24 h-32 bg-gray-100 rounded border overflow-hidden flex justify-center items-center">
+                            <% if (book.image) { %>
+                                <img src="<%= book.image_full_path %>" class="w-full h-full object-contain">
+                            <% } else { %>
+                                <div class="flex flex-col justify-center items-center">
+                                    <i class="fas fa-book text-3xl mb-1"></i>
+                                    <span class="text-[9px] text-center">SAMPUL BELUM TERSEDIA</span>
+                                </div>
+                            <% } %>
                         </div>
 
                         <!-- Info -->

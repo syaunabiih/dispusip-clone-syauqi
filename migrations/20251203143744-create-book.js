@@ -29,6 +29,8 @@ module.exports = {
       stock_total: Sequelize.INTEGER,
       stock_available: Sequelize.INTEGER,
       category_id: { type: Sequelize.INTEGER, allowNull: false },
+      // Menambahkan kolom image_url
+      image: { type: Sequelize.STRING, allowNull: true },
       createdAt: { 
         type: Sequelize.DATE,
         allowNull: false,

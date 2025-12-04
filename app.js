@@ -43,3 +43,5 @@ db.authenticate()
     .catch(err => {
         console.error('Gagal koneksi atau sinkronisasi database:', err);
     });
+
+app.set('trust proxy', true);

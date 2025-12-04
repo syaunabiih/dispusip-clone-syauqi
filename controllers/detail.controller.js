@@ -60,7 +60,8 @@ module.exports = {
                 subject: book.Subjects?.[0]?.name || "-",
                 category: book.Category?.name || "-",
                 stock_total: book.stock_total || 0,         
-                stock_available: book.stock_available || 0
+                stock_available: book.stock_available || 0,
+                image: book.image || null
             };
 
             // ================================
@@ -68,8 +69,13 @@ module.exports = {
             // ================================
             let qrImage = null;
             try {
-                const qrText = `Judul: ${bookData.title}\nNo. Panggil: ${bookData.call_number}`;
-                qrImage = await QRCode.toDataURL(qrText);
+                const host = req.get("x-forwarded-host") || req.get("host");
+                const protocol = req.get("x-forwarded-proto") || req.protocol;
+
+                const baseUrl = `${protocol}://${host}`;
+                const qrUrl = `${baseUrl}/book/${bookId}`;
+
+                qrImage = await QRCode.toDataURL(qrUrl);
             } catch (err) {
                 console.warn("QR Code gagal dibuat:", err);
             }
