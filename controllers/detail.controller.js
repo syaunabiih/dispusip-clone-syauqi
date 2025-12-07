@@ -57,7 +57,7 @@ module.exports = {
                 publisher: book.Publishers?.[0]?.name || "-",
                 author: book.Authors?.[0]?.name || "-",
                 additional_author: book.Authors?.[1]?.name || null,
-                subject: book.Subjects?.[0]?.name || "-",
+                subject: book.Subjects?.map(s => s.name).join(', ') || '-',
                 category: book.Category?.name || "-",
                 stock_total: book.stock_total || 0,         
                 stock_available: book.stock_available || 0,

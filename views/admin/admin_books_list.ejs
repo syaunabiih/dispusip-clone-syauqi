@@ -54,7 +54,11 @@
                 <td class="p-4">
                     <a href="/admin/books/edit/<%= book.id %>" class="text-blue-600 hover:underline">Edit</a> |
                     <form action="/admin/books/delete/<%= book.id %>" method="POST" class="inline" onsubmit="return confirm('Apakah yakin ingin menghapus buku ini?');">
-                        <button type="submit" class="text-red-600 hover:underline bg-none border-none p-0">Hapus</button>
+                        <a href="/admin/books/delete/<%= book.id %>" 
+                        onclick="return confirm('Apakah yakin ingin menghapus buku ini?');" 
+                        class="text-red-600 hover:underline">
+                        Hapus
+                        </a>
                     </form>
                 </td>
             </tr>

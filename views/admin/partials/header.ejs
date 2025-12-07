@@ -9,20 +9,30 @@
 <body class="bg-gray-100 flex">
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-white h-screen shadow-lg fixed">
-        <div class="p-6 border-b">
-            <h1 class="text-lg font-bold text-blue-600">Admin Panel</h1>
+    <aside class="w-64 bg-white h-screen shadow-lg fixed flex flex-col justify-between">
+        <div>
+            <div class="p-6 border-b">
+                <h1 class="text-lg font-bold text-blue-600">Admin Panel</h1>
+            </div>
+
+            <nav class="mt-4">
+                <a href="/admin/books" class="block px-6 py-3 hover:bg-blue-50 <%= active === 'home' ? 'bg-blue-100 font-semibold' : '' %>">
+                    📚 Daftar Buku
+                </a>
+
+                <a href="/admin/books/add" class="block px-6 py-3 hover:bg-blue-50 <%= active === 'add' ? 'bg-blue-100 font-semibold' : '' %>">
+                    ➕ Tambah Buku
+                </a>
+            </nav>
         </div>
 
-        <nav class="mt-4">
-            <a href="/admin/books" class="block px-6 py-3 hover:bg-blue-50 <%= active === 'home' ? 'bg-blue-100 font-semibold' : '' %>">
-                📚 Daftar Buku
+        <!-- Logout Button di bawah -->
+        <div class="mb-6 px-6">
+            <a href="/admin/logout"
+            class="w-full block py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-200 text-center">
+                Logout
             </a>
-
-            <a href="/admin/books/add" class="block px-6 py-3 hover:bg-blue-50 <%= active === 'add' ? 'bg-blue-100 font-semibold' : '' %>">
-                ➕ Tambah Buku
-            </a>
-        </nav>
+        </div>
     </aside>
 
     <!-- Main Content -->

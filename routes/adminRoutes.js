@@ -1,7 +1,26 @@
 const express = require("express");
 const router = express.Router();
+const { isAdminLoggedIn } = require("../middleware/auth"); // CommonJS
 const adminBookController = require("../controllers/admin.controller");
 const upload = require("../middleware/imageMiddleware")();
+const { loginPage, loginAction, logoutAction } = require("../controllers/auth.controller"); // CommonJS
+
+// =========================
+// LOGIN & LOGOUT (TIDAK PERLU SESSION)
+// =========================
+
+router.get("/", (req, res) => {
+    res.redirect("/admin/login");
+});
+
+router.get("/login", loginPage);
+router.post("/login", loginAction);
+router.get("/logout", logoutAction);
+
+// =========================
+// SEMUA ROUTE ADMIN PERLU LOGIN
+// =========================
+router.use(isAdminLoggedIn);
 
 // =========================
 // LIST BUKU
