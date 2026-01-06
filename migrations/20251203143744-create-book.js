@@ -24,7 +24,6 @@ module.exports = {
       notes: Sequelize.TEXT,
       language: Sequelize.STRING,
       shelf_location: Sequelize.STRING,
-      stock_total: Sequelize.INTEGER,
       category_id: { 
         type: Sequelize.INTEGER, 
         allowNull: false 

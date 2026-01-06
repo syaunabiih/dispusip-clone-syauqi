@@ -16,7 +16,6 @@ module.exports = (sequelize, DataTypes) => {
         notes: DataTypes.TEXT,
         language: DataTypes.STRING,
         shelf_location: DataTypes.STRING,
-        stock_total: DataTypes.INTEGER,
         category_id: DataTypes.INTEGER,
         image: { 
             type: DataTypes.STRING, 
@@ -30,6 +29,13 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Book.associate = (models) => {
+
+        Book.hasMany(models.BookCopy, { 
+            foreignKey: 'book_id', 
+            as: 'copies',
+            onDelete: 'CASCADE' // Jika buku dihapus, fisik/nomor induknya ikut terhapus
+        });
+
         Book.belongsTo(models.Category, { 
             foreignKey: 'category_id' 
         });

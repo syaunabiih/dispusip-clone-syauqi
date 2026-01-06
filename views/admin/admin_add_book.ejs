@@ -120,11 +120,19 @@
             <label class="font-medium">Lokasi Rak</label>
             <input type="text" name="shelf_location" class="w-full p-2 border rounded">
         </div>
+    </div>
 
-        <div>
-            <label class="font-medium">Total Stok</label>
-            <input type="number" name="stock_total" class="w-full p-2 border rounded">
-        </div>
+    <div class="mt-4">
+        <label class="font-medium text-blue-700">Nomor Induk Fisik Buku</label>
+        <textarea 
+            name="no_induk" 
+            rows="4" 
+            class="w-full p-2 border-2 border-blue-200 rounded focus:border-blue-500 outline-none" 
+            placeholder="Masukkan nomor induk. Gunakan koma atau enter untuk banyak buku.&#10;Contoh:&#10;2024-001&#10;2024-002&#10;2024-003"
+        ></textarea>
+        <p class="text-sm text-gray-500 mt-1 italic">
+            *Satu nomor induk akan terdaftar sebagai 1 eksemplar fisik buku. Total stok akan dihitung otomatis.
+        </p>
     </div>
 
     <!-- STOK DAN GAMBAR -->
@@ -140,9 +148,37 @@
         </div>
     </div> -->
 
+    <!-- ================= COVER BUKU ================= -->
     <div>
         <label class="font-medium">Cover Buku</label>
-        <input type="file" name="image" accept="image/*" class="w-full p-2 border rounded">
+
+        <div id="cover-wrapper" class="mt-2 space-y-2">
+            <input 
+                type="file" 
+                name="image" 
+                id="cover-input"
+                accept="image/*" 
+                class="w-full p-2 border rounded"
+            >
+
+            <div 
+                id="cover-preview" 
+                class="hidden flex items-center gap-3"
+            >
+                <span 
+                    id="cover-filename"
+                    class="px-3 py-1 bg-gray-200 rounded text-sm"
+                ></span>
+
+                <button 
+                    type="button" 
+                    id="remove-cover"
+                    class="text-red-600 font-bold hover:text-red-800"
+                >
+                    ✖
+                </button>
+            </div>
+        </div>
     </div>
 
     <button 
@@ -161,24 +197,34 @@
             create: true,
             sortField: { field: "text", direction: "asc" },
             placeholder: placeholderText,
-            allowEmptyOption: !isMultiple,
-            render: {
-                item: function(data, escape) {
-                    return `<div class="bg-blue-100 text-blue-800 rounded px-2 py-1 mr-1 mb-1 inline-block">${escape(data.text)}</div>`;
-                },
-                option: function(data, escape) {
-                    return `<div class="hover:bg-blue-100 hover:text-blue-800 p-1">${escape(data.text)}</div>`;
-                }
-            }
+            allowEmptyOption: !isMultiple
         });
     }
 
-    // Inisialisasi TomSelect
     initTomSelect("#category-select", "Cari atau tambah kategori...");
     initTomSelect("#author-select", "Cari atau tambah penulis...");
     initTomSelect("#subject-select", "Cari atau tambah subjek...");
     initTomSelect("#publisher-select", "Pilih atau tambah penerbit...");
 
+    const coverInput = document.getElementById('cover-input');
+    const coverPreview = document.getElementById('cover-preview');
+    const coverFilename = document.getElementById('cover-filename');
+    const removeCoverBtn = document.getElementById('remove-cover');
+
+    coverInput.addEventListener('change', () => {
+        if (!coverInput.files.length) return;
+
+        coverFilename.textContent = coverInput.files[0].name;
+
+        coverInput.classList.add('hidden');     // sembunyikan input
+        coverPreview.classList.remove('hidden'); // tampilkan nama file
+    });
+
+    removeCoverBtn.addEventListener('click', () => {
+        coverInput.value = "";                  // hapus file
+        coverInput.classList.remove('hidden');  // munculkan input
+        coverPreview.classList.add('hidden');   // sembunyikan preview
+    });
 </script>
 
 <%- include('partials/footer') %>

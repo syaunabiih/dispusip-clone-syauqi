@@ -47,10 +47,6 @@
                                 <td class="px-4 py-2 font-semibold text-gray-600">Judul</td>
                                 <td class="px-4 py-2 font-bold text-gray-900"><%= book.title %></td>
                             </tr>
-                            <tr class="bg-blue-50/50 border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Judul Asli</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.original_title || '-' %></td>
-                            </tr>
                             <tr class="border-b border-gray-100">
                                 <td class="px-4 py-2 font-semibold text-gray-600">Pengarang</td>
                                 <td class="px-4 py-2">
@@ -64,10 +60,6 @@
                                 <td class="px-4 py-2 font-semibold text-gray-600">Edisi</td>
                                 <td class="px-4 py-2 text-gray-800"><%= book.edition || '-' %></td>
                             </tr>
-                            <tr class="border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Pernyataan Seri</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.series_title || '-' %></td>
-                            </tr>
                             <tr class="bg-blue-50/50 border-b border-gray-100">
                                 <td class="px-4 py-2 font-semibold text-gray-600">Penerbitan</td>
                                 <td class="px-4 py-2 text-gray-800">
@@ -79,18 +71,6 @@
                             <tr class="border-b border-gray-100">
                                 <td class="px-4 py-2 font-semibold text-gray-600">Deskripsi Fisik</td>
                                 <td class="px-4 py-2 text-gray-800"><%= book.physical_description || '-' %></td>
-                            </tr>
-                            <tr class="bg-blue-50/50 border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Jenis Isi</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.content_type %></td>
-                            </tr>
-                            <tr class="border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Jenis Media</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.media_type %></td>
-                            </tr>
-                            <tr class="bg-blue-50/50 border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Jenis Wadah</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.carrier_type %></td>
                             </tr>
                             <tr class="border-b border-gray-100">
                                 <td class="px-4 py-2 font-semibold text-gray-600">ISBN</td>
@@ -114,18 +94,10 @@
                                 <td class="px-4 py-2 font-semibold text-gray-600">Bahasa</td>
                                 <td class="px-4 py-2 text-gray-800"><%= book.language %></td>
                             </tr>
-                            <tr class="bg-blue-50/50 border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Bentuk Karya</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.work_type %></td>
-                            </tr>
-                            <tr class="border-b border-gray-100">
-                                <td class="px-4 py-2 font-semibold text-gray-600">Target Pembaca</td>
-                                <td class="px-4 py-2 text-gray-800"><%= book.target_audience %></td>
-                            </tr>
                             <tr class="border-b border-gray-100">
                                 <td class="px-4 py-2 font-semibold text-gray-600">Stok</td>
                                 <td class="px-4 py-2 text-gray-800">
-                                    <%= book.stock_available %> tersedia dari total <%= book.stock_total %> eks.
+                                    <%= book.total_books %> tersedia dari total <%= book.stock_total %> eks.
                                 </td>
                             </tr>
                             <tr class="border-b border-gray-100">

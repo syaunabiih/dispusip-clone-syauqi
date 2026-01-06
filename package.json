@@ -10,6 +10,7 @@
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
     "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",
     "seed": "npx sequelize-cli db:seed:all",
+    "seed-admin" : "npx sequelize-cli db:seed --seed seed-admin.js",
     "seed:undo": "npx sequelize-cli db:seed:undo:all"
   },
   "dependencies": {

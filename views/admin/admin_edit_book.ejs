@@ -12,207 +12,204 @@
     class="bg-white p-6 rounded-lg shadow space-y-6"
 >
 
-    <!-- INFORMASI DASAR -->
-    <div class="grid grid-cols-2 gap-6">
-        <div class="space-y-4">
-            <div>
-                <label class="font-medium">Judul</label>
-                <input type="text" name="title" value="<%= book.title %>" required class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Judul Asli</label>
-                <input type="text" name="original_title" value="<%= book.original_title %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Pernyataan Tanggung Jawab</label>
-                <input type="text" name="statement_of_responsibility" value="<%= book.statement_of_responsibility %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Series Title</label>
-                <input type="text" name="series_title" value="<%= book.series_title %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Edisi</label>
-                <input type="text" name="edition" value="<%= book.edition %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Tahun Terbit</label>
-                <input type="text" name="publish_year" maxlength="4" value="<%= book.publish_year %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Tempat Terbit</label>
-                <input type="text" name="publish_place" value="<%= book.publish_place %>" class="w-full p-2 border rounded">
-            </div>
+<!-- ================= INFORMASI DASAR ================= -->
+<div class="grid grid-cols-2 gap-6">
+    <div class="space-y-4">
+        <div>
+            <label class="font-medium">Judul</label>
+            <input type="text" name="title" value="<%= book.title %>" required class="w-full p-2 border rounded">
         </div>
 
-        <div class="space-y-4">
-            <div>
-                <label class="font-medium">Deskripsi Fisik</label>
-                <input type="text" name="physical_description" value="<%= book.physical_description %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Content Type</label>
-                <input type="text" name="content_type" value="<%= book.content_type %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Media Type</label>
-                <input type="text" name="media_type" value="<%= book.media_type %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Carrier Type</label>
-                <input type="text" name="carrier_type" value="<%= book.carrier_type %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">ISBN</label>
-                <input type="text" name="isbn" value="<%= book.isbn %>" class="w-full p-2 border rounded">
-            </div>
-            <div>
-                <label class="font-medium">Call Number</label>
-                <input type="text" name="call_number" value="<%= book.call_number %>" class="w-full p-2 border rounded">
-            </div>
+        <div>
+            <label class="font-medium">Edisi</label>
+            <input type="text" name="edition" value="<%= book.edition %>" class="w-full p-2 border rounded">
+        </div>
+
+        <div>
+            <label class="font-medium">Tahun Terbit</label>
+            <input type="text" name="publish_year" maxlength="4" value="<%= book.publish_year %>" class="w-full p-2 border rounded">
+        </div>
+
+        <div>
+            <label class="font-medium">Tempat Terbit</label>
+            <input type="text" name="publish_place" value="<%= book.publish_place %>" class="w-full p-2 border rounded">
         </div>
     </div>
 
-    <!-- ABSTRAK DAN CATATAN -->
+    <div class="space-y-4">
+        <div>
+            <label class="font-medium">Deskripsi Fisik</label>
+            <input type="text" name="physical_description" value="<%= book.physical_description %>" class="w-full p-2 border rounded">
+        </div>
+
+        <div>
+            <label class="font-medium">ISBN</label>
+            <input type="text" name="isbn" value="<%= book.isbn %>" class="w-full p-2 border rounded">
+        </div>
+
+        <div>
+            <label class="font-medium">Call Number</label>
+            <input type="text" name="call_number" value="<%= book.call_number %>" class="w-full p-2 border rounded">
+        </div>
+    </div>
+</div>
+
+<!-- ================= ABSTRAK & CATATAN ================= -->
+<div>
+    <label class="font-medium">Abstrak</label>
+    <textarea name="abstract" rows="4" class="w-full p-2 border rounded"><%= book.abstract %></textarea>
+</div>
+
+<div>
+    <label class="font-medium">Catatan</label>
+    <textarea name="notes" rows="3" class="w-full p-2 border rounded"><%= book.notes %></textarea>
+</div>
+
+<!-- ================= AUTHOR & PUBLISHER ================= -->
+<div class="grid grid-cols-2 gap-6">
     <div>
-        <label class="font-medium">Abstrak</label>
-        <textarea name="abstract" rows="4" class="w-full p-2 border rounded"><%= book.abstract %></textarea>
+        <label class="font-medium">Penulis</label>
+        <select name="authors[]" id="author-select" class="w-full p-2 border rounded" multiple>
+            <% authors.forEach(a => { %>
+                <option value="<%= a.id %>" <%= book.Authors.some(b => b.id === a.id) ? 'selected' : '' %>>
+                    <%= a.name %>
+                </option>
+            <% }) %>
+        </select>
     </div>
 
     <div>
-        <label class="font-medium">Catatan / Notes</label>
-        <textarea name="notes" rows="3" class="w-full p-2 border rounded"><%= book.notes %></textarea>
+        <label class="font-medium">Penerbit</label>
+        <select name="publishers[]" id="publisher-select" class="w-full p-2 border rounded" multiple>
+            <% publishers.forEach(p => { %>
+                <option value="<%= p.id %>" <%= book.Publishers.some(b => b.id === p.id) ? 'selected' : '' %>>
+                    <%= p.name %>
+                </option>
+            <% }) %>
+        </select>
     </div>
+</div>
 
-    <!-- AUTHOR & PUBLISHER -->
-    <div class="grid grid-cols-2 gap-6">
-        <div>
-            <label class="font-medium">Penulis (Authors)</label>
-            <select name="authors[]" id="author-select" class="w-full p-2 border rounded" multiple>
-                <% authors.forEach(a => { %>
-                    <option value="<%= a.id %>" <%= book.Authors.some(ba => ba.id === a.id) ? "selected" : "" %>><%= a.name %></option>
-                <% }) %>
-            </select>
-        </div>
-        <div>
-            <label class="font-medium">Penerbit (Publishers)</label>
-            <select name="publishers[]" id="publisher-select" class="w-full p-2 border rounded" multiple>
-                <% publishers.forEach(p => { %>
-                    <option value="<%= p.id %>" <%= book.Publishers.some(bp => bp.id === p.id) ? "selected" : "" %>><%= p.name %></option>
-                <% }) %>
-            </select>
-        </div>
-    </div>
-
-    <!-- CATEGORY & SUBJECT -->
-    <div class="grid grid-cols-2 gap-6">
-        <div>
-            <label class="font-medium">Kategori</label>
-            <select name="category_id[]" id="category-select" class="w-full p-2 border rounded" multiple>
-                <% categories.forEach(c => { %>
-                    <option value="<%= c.id %>" <%= book.Category && book.Category.id === c.id ? "selected" : "" %>><%= c.name %></option>
-                <% }) %>
-            </select>
-        </div>
-        <div>
-            <label class="font-medium">Subjek (Subjects)</label>
-            <select name="subjects[]" id="subject-select" class="w-full p-2 border rounded" multiple>
-                <% subjects.forEach(s => { %>
-                    <option value="<%= s.id %>" <%= book.Subjects.some(bs => bs.id === s.id) ? "selected" : "" %>><%= s.name %></option>
-                <% }) %>
-            </select>
-        </div>
-    </div>
-
-    <!-- INFORMASI LAIN -->
-    <div class="grid grid-cols-2 gap-6">
-        <div>
-            <label class="font-medium">Bahasa</label>
-            <input type="text" name="language" value="<%= book.language %>" class="w-full p-2 border rounded">
-        </div>
-        <div>
-            <label class="font-medium">Work Type</label>
-            <input type="text" name="work_type" value="<%= book.work_type %>" class="w-full p-2 border rounded">
-        </div>
-        <div>
-            <label class="font-medium">Target Audience</label>
-            <input type="text" name="target_audience" value="<%= book.target_audience %>" class="w-full p-2 border rounded">
-        </div>
-        <div>
-            <label class="font-medium">Lokasi Rak (Shelf Location)</label>
-            <input type="text" name="shelf_location" value="<%= book.shelf_location %>" class="w-full p-2 border rounded">
-        </div>
-    </div>
-
-    <!-- STOK DAN GAMBAR -->
-    <div class="grid grid-cols-2 gap-6">
-        <div>
-            <label class="font-medium">Total Stok</label>
-            <input type="number" name="stock_total" value="<%= book.stock_total %>" class="w-full p-2 border rounded">
-        </div>
-        <div>
-            <label class="font-medium">Stok Tersedia</label>
-            <input type="number" name="stock_available" value="<%= book.stock_available %>" class="w-full p-2 border rounded">
-        </div>
-    </div>
-
-    <!-- UPLOAD COVER -->
+<!-- ================= KATEGORI & SUBJEK ================= -->
+<div class="grid grid-cols-2 gap-6">
     <div>
-        <label class="font-medium">Upload Cover</label>
-        <% if (book.image) { %>
-            <div id="existing-image" class="flex items-center space-x-2 mt-2">
-                <span class="px-2 py-1 bg-gray-200 rounded"><%= book.image %></span>
-                <button type="button" id="remove-image" class="text-red-500 font-bold">✖</button>
-            </div>
-            <input type="file" name="image" accept="image/*" class="w-full p-2 border rounded mt-2 hidden" id="image-input">
-        <% } else { %>
-            <input type="file" name="image" accept="image/*" class="w-full p-2 border rounded mt-2" id="image-input">
-        <% } %>
+        <label class="font-medium">Kategori</label>
+        <select name="category_id" id="category-select" class="w-full p-2 border rounded">
+            <% categories.forEach(c => { %>
+                <option value="<%= c.id %>" <%= book.Category?.id === c.id ? 'selected' : '' %>>
+                    <%= c.name %>
+                </option>
+            <% }) %>
+        </select>
     </div>
 
-    <button 
-        type="submit"
-        class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700"
-    >
-        Update Buku
-    </button>
+    <div>
+        <label class="font-medium">Subjek</label>
+        <select name="subjects[]" id="subject-select" class="w-full p-2 border rounded" multiple>
+            <% subjects.forEach(s => { %>
+                <option value="<%= s.id %>" <%= book.Subjects.some(bs => bs.id === s.id) ? 'selected' : '' %>>
+                    <%= s.name %>
+                </option>
+            <% }) %>
+        </select>
+    </div>
+</div>
+
+<!-- ================= INFORMASI LAIN ================= -->
+<div class="grid grid-cols-2 gap-6">
+    <div>
+        <label class="font-medium">Bahasa</label>
+        <input type="text" name="language" value="<%= book.language %>" class="w-full p-2 border rounded">
+    </div>
+
+    <div>
+        <label class="font-medium">Lokasi Rak</label>
+        <input type="text" name="shelf_location" value="<%= book.shelf_location %>" class="w-full p-2 border rounded">
+    </div>
+</div>
+
+<!-- ================= NO INDUK (EKSEMPLAR FISIK) ================= -->
+<div class="mt-4">
+    <label class="font-medium text-blue-700">Nomor Induk Fisik Buku</label>
+
+    <textarea 
+        name="no_induk"
+        rows="4"
+        class="w-full p-2 border-2 border-blue-200 rounded focus:border-blue-500 outline-none"
+    ><%= book.copies?.map(c => c.no_induk).join('\n') %></textarea>
+
+    <p class="text-sm text-gray-500 mt-1 italic">
+        *Satu nomor induk = satu eksemplar fisik buku.  
+        Stok akan dihitung otomatis dari jumlah nomor induk.
+    </p>
+</div>
+
+<!-- ================= COVER ================= -->
+<div>
+    <label class="font-medium">Cover Buku</label>
+
+    <% if (book.image) { %>
+        <div id="existing-cover" class="flex items-center gap-3 mt-2">
+            <span class="px-3 py-1 bg-gray-200 rounded text-sm">
+                <%= book.image %>
+            </span>
+            <button 
+                type="button" 
+                id="remove-cover"
+                class="text-red-600 font-bold hover:text-red-800"
+                title="Hapus / ganti cover"
+            >
+                ✖
+            </button>
+        </div>
+
+        <input 
+            type="file" 
+            name="image" 
+            id="cover-input"
+            accept="image/*" 
+            class="w-full p-2 border rounded mt-2 hidden"
+        >
+    <% } else { %>
+        <input 
+            type="file" 
+            name="image" 
+            accept="image/*" 
+            class="w-full p-2 border rounded mt-2"
+        >
+    <% } %>
+</div>
+
+<button class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
+    Update Buku
+</button>
 
 </form>
 
 <script>
     function initTomSelect(selector, placeholderText) {
-        return new TomSelect(selector, {
+        new TomSelect(selector, {
             plugins: ['remove_button'],
             create: true,
             sortField: { field: "text", direction: "asc" },
-            placeholder: placeholderText,
-            render: {
-                item: function(data, escape) {
-                    return `<div class="bg-blue-100 text-blue-800 rounded px-2 py-1 mr-1 mb-1 inline-block">${escape(data.text)}</div>`;
-                },
-                option: function(data, escape) {
-                    return `<div class="hover:bg-blue-100 hover:text-blue-800 p-1">${escape(data.text)}</div>`;
-                }
-            }
+            placeholder: placeholderText
         });
     }
 
-    // Inisialisasi TomSelect
-    initTomSelect("#category-select", "Cari atau tambah kategori...");
     initTomSelect("#author-select", "Cari atau tambah penulis...");
     initTomSelect("#publisher-select", "Cari atau tambah penerbit...");
     initTomSelect("#subject-select", "Cari atau tambah subjek...");
+    initTomSelect("#category-select", "Cari atau tambah kategori...");
 
-    // Script untuk handle tombol hapus cover
-    const removeBtn = document.getElementById('remove-image');
-    const imageInput = document.getElementById('image-input');
-    const existingImage = document.getElementById('existing-image');
+    const removeCoverBtn = document.getElementById('remove-cover');
+    const existingCover = document.getElementById('existing-cover');
+    const coverInput = document.getElementById('cover-input');
 
-    if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-            existingImage.remove();                // Hapus tampilan nama file
-            imageInput.classList.remove('hidden'); // Tampilkan input file baru
-            imageInput.value = "";                 // Reset input file
+    if (removeCoverBtn) {
+        removeCoverBtn.addEventListener('click', () => {
+            existingCover.remove();          // hapus nama file
+            coverInput.classList.remove('hidden'); // munculkan input file
+            coverInput.value = "";           // reset input
         });
     }
 </script>

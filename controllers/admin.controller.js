@@ -1,4 +1,4 @@
-const { Book, Category, Author, Publisher, Subject } = require("../models");
+const { Book, Category, Author, Publisher, Subject, BookCopy } = require("../models");
 const { Op } = require("sequelize");
 
 module.exports = {
@@ -10,7 +10,8 @@ module.exports = {
             const q = req.query.q || "";
 
             // total semua buku (tanpa filter search)
-            const totalBooks = await Book.count();
+            const totalTitle = await Book.count();
+            const totalBook = await BookCopy.count();
 
             // daftar buku (dengan search jika ada)
             const books = await Book.findAll({
@@ -28,7 +29,8 @@ module.exports = {
                 title: "Daftar Buku",
                 books,
                 q,
-                totalBooks // ⬅️ kirim ke view
+                totalTitle,
+                totalBook
             });
 
         } catch (err) {
@@ -68,15 +70,10 @@ module.exports = {
         try {
             const data = req.body;
 
-            // =====================
-            // CATEGORY
-            // =====================
+            // 1. Logika Kategori (Tetap sama)
             let categoryId = null;
             if (data.category_id) {
-                const cat = Array.isArray(data.category_id)
-                    ? data.category_id[0]
-                    : data.category_id;
-
+                const cat = Array.isArray(data.category_id) ? data.category_id[0] : data.category_id;
                 if (isNaN(cat)) {
                     const newCategory = await Category.create({ name: String(cat) });
                     categoryId = newCategory.id;
@@ -148,10 +145,33 @@ module.exports = {
                 notes: data.notes,
                 language: data.language,
                 shelf_location: data.shelf_location,
-                stock_total: data.stock_total,
                 category_id: categoryId,
                 image: req.file ? req.file.filename : null
             });
+
+            if (data.no_induk) {
+                // Kita asumsikan input no_induk dikirim sebagai string (dipisah koma atau baris baru)
+                // Contoh input: "B001, B002, B003"
+                const noIndukRaw = data.no_induk;
+                
+                // Bersihkan input: pecah string menjadi array, hapus spasi kosong, buang nilai kosong
+                const noIndukArray = noIndukRaw.split(/[\n,]+/).map(item => item.trim()).filter(item => item !== "");
+
+                if (noIndukArray.length > 0) {
+                    // Siapkan data untuk bulkInsert
+                    const copyData = noIndukArray.map(nomor => ({
+                        book_id: book.id,
+                        no_induk: nomor,
+                        status: 'tersedia'
+                    }));
+
+                    // Simpan semua nomor induk sekaligus
+                    await BookCopy.bulkCreate(copyData);
+                    
+                    // Update total stok di tabel Book secara otomatis berdasarkan jumlah nomor induk
+                    await book.update({ stock_total: noIndukArray.length });
+                }
+            }
 
             // =====================
             // RELATIONS
@@ -174,14 +194,21 @@ module.exports = {
     showEditPage: async (req, res) => {
         try {
             const book = await Book.findByPk(req.params.id, {
-                include: [Category, Author, Publisher, Subject]
+                include: [
+                    Category,
+                    { model: Author, as: 'Authors' },
+                    { model: Publisher, as: 'Publishers' },
+                    { model: Subject, as: 'Subjects' },
+                    { model: BookCopy, as: 'copies' } 
+                ]
             });
+
+            if (!book) return res.status(404).send("Buku tidak ditemukan");
+
             const categories = await Category.findAll();
             const authors = await Author.findAll();
             const publishers = await Publisher.findAll();
             const subjects = await Subject.findAll();
-
-            if (!book) return res.status(404).send("Buku tidak ditemukan");
 
             res.render("admin/admin_edit_book", {
                 title: "Edit Buku",
@@ -208,7 +235,7 @@ module.exports = {
             const data = req.body;
 
             // =========================
-            // CATEGORY (SINGLE)
+            // CATEGORY
             // =========================
             let categoryId = null;
             if (data.category_id) {
@@ -225,7 +252,7 @@ module.exports = {
             }
 
             // =========================
-            // AUTHORS (MANY)
+            // AUTHORS
             // =========================
             let authorIds = [];
             if (data.authors) {
@@ -233,7 +260,7 @@ module.exports = {
                     ? data.authors
                     : [data.authors];
 
-                for (let a of authorsArray) {
+                for (const a of authorsArray) {
                     if (isNaN(a)) {
                         const newAuthor = await Author.create({ name: String(a) });
                         authorIds.push(newAuthor.id);
@@ -244,7 +271,7 @@ module.exports = {
             }
 
             // =========================
-            // PUBLISHERS (MANY)
+            // PUBLISHERS
             // =========================
             let publisherIds = [];
             if (data.publishers) {
@@ -252,7 +279,7 @@ module.exports = {
                     ? data.publishers
                     : [data.publishers];
 
-                for (let p of publishersArray) {
+                for (const p of publishersArray) {
                     if (isNaN(p)) {
                         const newPublisher = await Publisher.create({ name: String(p) });
                         publisherIds.push(newPublisher.id);
@@ -263,7 +290,7 @@ module.exports = {
             }
 
             // =========================
-            // SUBJECTS (MANY)
+            // SUBJECTS
             // =========================
             let subjectIds = [];
             if (data.subjects) {
@@ -271,7 +298,7 @@ module.exports = {
                     ? data.subjects
                     : [data.subjects];
 
-                for (let s of subjectsArray) {
+                for (const s of subjectsArray) {
                     if (isNaN(s)) {
                         const newSubject = await Subject.create({ name: String(s) });
                         subjectIds.push(newSubject.id);
@@ -282,33 +309,54 @@ module.exports = {
             }
 
             // =========================
-            // UPDATE BOOK
+            // UPDATE BOOK DATA (TANPA STOCK)
             // =========================
             await book.update({
                 title: data.title,
-                original_title: data.original_title,
-                statement_of_responsibility: data.statement_of_responsibility,
-                series_title: data.series_title,
                 edition: data.edition,
                 publish_year: data.publish_year,
                 publish_place: data.publish_place,
                 physical_description: data.physical_description,
-                content_type: data.content_type,
-                media_type: data.media_type,
-                carrier_type: data.carrier_type,
                 isbn: data.isbn,
                 call_number: data.call_number,
                 abstract: data.abstract,
                 notes: data.notes,
                 language: data.language,
-                work_type: data.work_type,
-                target_audience: data.target_audience,
-                stock_total: data.stock_total,
-                stock_available: data.stock_available,
                 shelf_location: data.shelf_location,
                 category_id: categoryId,
                 image: req.file ? req.file.filename : book.image
             });
+
+            // =========================
+            // UPDATE BOOK COPIES (NO INDUK)
+            // =========================
+            if (data.no_induk) {
+                const noIndukArray = data.no_induk
+                    .split(/[\n,]+/)
+                    .map(n => n.trim())
+                    .filter(n => n !== "");
+
+                // 1. Hapus semua copy lama
+                await BookCopy.destroy({
+                    where: { book_id: book.id }
+                });
+
+                // 2. Insert ulang copy baru
+                if (noIndukArray.length > 0) {
+                    const copyData = noIndukArray.map(nomor => ({
+                        book_id: book.id,
+                        no_induk: nomor,
+                        status: 'tersedia'
+                    }));
+
+                    await BookCopy.bulkCreate(copyData);
+
+                    // 3. Update stock_total otomatis
+                    await book.update({
+                        stock_total: noIndukArray.length
+                    });
+                }
+            }
 
             // =========================
             // UPDATE RELATIONS
@@ -320,7 +368,7 @@ module.exports = {
             res.redirect("/admin/books");
 
         } catch (err) {
-            console.log(err);
+            console.error(err);
             res.status(500).send("Gagal memperbarui buku: " + err.message);
         }
     },

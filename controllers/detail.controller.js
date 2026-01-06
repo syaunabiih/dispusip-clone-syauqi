@@ -7,7 +7,8 @@ const {
     Subject,
     BookAuthor,
     BookPublisher,
-    BookSubject
+    BookSubject,
+    BookCopy
 } = require("../models");
 const QRCode = require("qrcode");
 
@@ -25,7 +26,13 @@ module.exports = {
                     { model: Author, through: { model: BookAuthor, attributes: [] }, required: false },
                     { model: Publisher, through: { model: BookPublisher, attributes: [] }, required: false },
                     { model: Subject, through: { model: BookSubject, attributes: [] }, required: false },
-                    { model: Category, required: false }
+                    { model: Category, required: false },
+                    {
+                        model: BookCopy,
+                        as: 'copies',
+                        attributes: ['id', 'no_induk'], // cukup ini
+                        required: false
+                    }
                 ]
             });
 
@@ -33,13 +40,13 @@ module.exports = {
                 return res.status(404).render("404", { message: "Buku tidak ditemukan" });
             }
 
+            const totalBooks = book.copies ? book.copies.length : 0;
+
             // Flatten data untuk EJS
             const bookData = {
                 id: book.id,
                 title: book.title || "-",
-                original_title: book.original_title || "-",
                 edition: book.edition || "-",
-                series_title: book.series_title || "-",
                 publish_place: book.publish_place || "-",
                 publish_year: book.publish_year || "-",
                 physical_description: book.physical_description || "-",
@@ -47,20 +54,17 @@ module.exports = {
                 abstract: book.abstract || "-",
                 notes: book.notes || "-",
                 language: book.language || "-",
-                content_type: book.content_type || "-",
-                media_type: book.media_type || "-",
-                carrier_type: book.carrier_type || "-",
-                work_type: book.work_type || "-",
-                target_audience: book.target_audience || "-",
                 call_number: book.call_number || "-",
                 shelf_location: book.shelf_location || "-",
+
                 publisher: book.Publishers?.[0]?.name || "-",
                 author: book.Authors?.[0]?.name || "-",
-                additional_author: book.Authors?.[1]?.name || null,
                 subject: book.Subjects?.map(s => s.name).join(', ') || '-',
                 category: book.Category?.name || "-",
-                stock_total: book.stock_total || 0,         
-                stock_available: book.stock_available || 0,
+
+                // 🔥 INI YANG DIMINTA
+                total_books: totalBooks,
+
                 image: book.image || null
             };
 
