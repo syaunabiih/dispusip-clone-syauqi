@@ -111,6 +111,70 @@
                 </div>
             </div>
 
+            <!-- Tabel Ketersediaan Eksemplar -->
+            <div class="bg-white border border-gray-200 shadow-sm">
+                <div class="bg-blue-800 text-white px-4 py-2 font-semibold text-sm">
+                    Ketersediaan Eksemplar
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left min-w-[600px]">
+                        <thead class="bg-gray-50 text-blue-800 font-bold border-b border-gray-200">
+                            <tr>
+                                <th class="p-3 border-r">No. Induk</th>
+                                <th class="p-3 border-r">Judul Buku</th>
+                                <th class="p-3 border-r">Lokasi</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-blue-50/20">
+                            <% if (copies && copies.length > 0) { %>
+                                <% copies.forEach(copy => { %>
+                                    <tr>
+                                        <td class="p-3 border-r text-blue-800 font-mono"><%= copy.no_induk %></td>
+                                        <td class="p-3 border-r text-gray-800 font-medium leading-tight"><%= copy.title %></td>
+                                        <td class="p-3 border-r text-gray-700">
+                                            <span class="block font-medium"><%= copy.location %></span>
+                                        </td>
+                                        <td class="p-3 text-gray-700">
+                                            <% if (copy.status === 'tersedia') { %>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Tersedia
+                                                </span>
+                                            <% } else if (copy.status === 'dipinjam') { %>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                    Dipinjam
+                                                </span>
+                                            <% } else if (copy.status === 'rusak') { %>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    Rusak
+                                                </span>
+                                            <% } else if (copy.status === 'hilang') { %>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                                                    Hilang
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-xs text-gray-600"><%= copy.status %></span>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="4" class="p-4 text-center text-gray-500 text-sm italic">Data eksemplar belum tersedia.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-4 py-2 text-right text-xs text-gray-500 border-t border-gray-200">
+                    <% if (copies && copies.length > 0) { %>
+                        Menampilkan <%= copies.length %> eksemplar
+                    <% } else { %>
+                        Tidak ada data eksemplar
+                    <% } %>
+                </div>
+            </div>
+
             <!-- PANGGIL PARTIAL DENAH -->
             <%- include('partials/shelfMap', { shelfLocation: book.shelf_location }) %>
 

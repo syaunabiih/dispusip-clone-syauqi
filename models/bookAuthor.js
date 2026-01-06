@@ -4,8 +4,6 @@ module.exports = (sequelize, DataTypes) => {
         author_id: DataTypes.INTEGER,
         role: DataTypes.STRING
     }, {
-        timestamps: true,           
-        createdAt: 'createdAt',     
-        updatedAt: 'updatedAt'
+        timestamps: false
     });
 };

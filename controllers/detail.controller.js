@@ -30,7 +30,7 @@ module.exports = {
                     {
                         model: BookCopy,
                         as: 'copies',
-                        attributes: ['id', 'no_induk'], // cukup ini
+                        attributes: ['id', 'no_induk', 'status'], // sertakan status eksemplar
                         required: false
                     }
                 ]
@@ -64,9 +64,16 @@ module.exports = {
 
                 // 🔥 INI YANG DIMINTA
                 total_books: totalBooks,
-
                 image: book.image || null
             };
+
+            // Siapkan data eksemplar untuk tabel ketersediaan
+            const copyRows = (book.copies || []).map(copy => ({
+                no_induk: copy.no_induk || '-',
+                title: book.title || '-',
+                location: book.shelf_location || '-',
+                status: copy.status || 'tersedia'
+            }));
 
             // ================================
             // 2. Generate QR Code
@@ -93,7 +100,10 @@ module.exports = {
                     [Op.or]: [
                         { title: { [Op.like]: `%${book.title.split(" ")[0]}%` } },
                         { shelf_location: book.shelf_location },
-                        { call_number: { [Op.like]: `${book.call_number.substring(0, 3)}%` } }
+                        // Hindari error jika call_number null atau pendek
+                        ...(book.call_number
+                            ? [{ call_number: { [Op.like]: `${book.call_number.substring(0, 3)}%` } }]
+                            : [])
                     ]
                 },
                 include: [
@@ -115,7 +125,8 @@ module.exports = {
                 title: bookData.title,
                 book: bookData,
                 qrImage,
-                relatedBooks: relatedFormatted
+                relatedBooks: relatedFormatted,
+                copies: copyRows
             });
 
         } catch (err) {

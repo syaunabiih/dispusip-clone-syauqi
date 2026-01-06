@@ -36,11 +36,7 @@ console.log('Sedang sinkronisasi database...');
 
 db.authenticate()
     .then(() => {
-        console.log('Database terhubung! Memulai update struktur tabel...');
-        return db.sync({ alter: true }); 
-    })
-    .then(() => {
-        console.log('Tabel database berhasil diperbarui!');
+        console.log('Database terhubung! Melewati alter table otomatis, gunakan migrasi.');
         app.listen(PORT, () => {
             console.log(`Sistem Referensi SIAP berjalan di http://localhost:${PORT}`);
         });
