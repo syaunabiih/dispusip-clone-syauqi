@@ -4,7 +4,6 @@
 
 <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 justify-center">
 
-    <!-- Total Judul Buku -->
     <div class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
         <div class="bg-blue-100 text-blue-600 p-3 rounded-full text-xl">
             📚
@@ -17,7 +16,6 @@
         </div>
     </div>
 
-    <!-- Total Buku Fisik -->
     <div class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
         <div class="bg-green-100 text-green-600 p-3 rounded-full text-xl">
             📖
@@ -32,7 +30,43 @@
 
 </div>
 
-<!-- SEARCH -->
+<div class="mb-4 flex flex-wrap gap-2">
+    <a href="/admin/books/export" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700">
+        📊 Export Data
+    </a>
+
+    <button onclick="toggleModal('importModal')" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700">
+        📥 Import Excel
+    </button>
+
+    <a href="/admin/books/template" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md font-semibold hover:bg-gray-700">
+        📄 Download Template
+    </a>
+</div>
+
+<div id="importModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full p-6 relative">
+            <h3 class="text-lg font-bold mb-4">Import Buku via Excel</h3>
+            
+            <form action="/admin/books/import" method="POST" enctype="multipart/form-data" id="importForm">
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 transition">
+                    <p class="text-gray-600">Drag & drop file Excel di sini atau <b>Klik untuk memilih</b></p>
+                    <input type="file" name="excelFile" id="fileInput" class="hidden" accept=".xlsx, .xls">
+                    <p id="fileName" class="mt-2 text-blue-600 font-medium"></p>
+                </div>
+                
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" onclick="toggleModal('importModal')" class="px-4 py-2 bg-gray-200 rounded-md">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Mulai Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <form action="/admin/books" method="GET" class="mb-6 flex items-center gap-2">
     <input 
         type="text" 
@@ -50,6 +84,7 @@
     <thead class="bg-gray-100 text-left">
         <tr>
             <th class="p-4">No</th>
+            <th class="p-4">Gambar</th>
             <th class="p-4">Judul</th>
             <th class="p-4">Pengarang</th>
             <th class="p-4">Kategori</th>
@@ -68,6 +103,21 @@
             <% books.forEach((book, index) => { %>
             <tr class="border-t hover:bg-gray-50">
                 <td class="p-4"><%= index + 1 %></td>
+
+                <td class="p-4">
+                    <div class="w-16 h-24 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                        <% if (book.image) { %>
+                            <img src="/image/uploads/<%= book.image %>" alt="Cover" class="w-full h-full object-cover">
+                        <% } else { %>
+                            <div class="text-center text-gray-400 p-1">
+                                <p style="font-size: 0.5rem;" class="font-serif leading-tight font-bold">
+                                    SAMPUL<br>BELUM<br>TERSEDIA
+                                </p>
+                            </div>
+                        <% } %>
+                    </div>
+                </td>
+
                 <td class="p-4"><%= book.title %></td>
                 <td class="p-4">
                     <% if (book.Authors && book.Authors.length > 0) { %>
@@ -96,4 +146,42 @@
         <% } %>
         </tbody>
 </table>
+
+<script>
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.toggle('hidden');
+    }
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileNameDisplay = document.getElementById('fileName');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) {
+            fileNameDisplay.innerText = "File terpilih: " + fileInput.files[0].name;
+        }
+    });
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    dropZone.addEventListener('dragover', () => dropZone.classList.add('bg-gray-100', 'border-blue-400'));
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('bg-gray-100', 'border-blue-400'));
+
+    dropZone.addEventListener('drop', (e) => {
+        dropZone.classList.remove('bg-gray-100', 'border-blue-400');
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            fileInput.files = files; 
+            fileNameDisplay.innerText = "File siap: " + files[0].name;
+        }
+    });
+</script>
 <%- include('partials/footer') %>

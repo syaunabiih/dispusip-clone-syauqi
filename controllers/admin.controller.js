@@ -1,19 +1,15 @@
 const { Book, Category, Author, Publisher, Subject, BookCopy } = require("../models");
 const { Op } = require("sequelize");
+const ExcelJS = require('exceljs');
 
 module.exports = {
-    // =========================
-    // LIST BUKU
-    // =========================
     listBooks: async (req, res) => {
         try {
             const q = req.query.q || "";
 
-            // total semua buku (tanpa filter search)
             const totalTitle = await Book.count();
             const totalBook = await BookCopy.count();
 
-            // daftar buku (dengan search jika ada)
             const books = await Book.findAll({
                 where: q ? { title: { [Op.like]: `%${q}%` } } : {},
                 include: [
@@ -36,6 +32,194 @@ module.exports = {
         } catch (err) {
             console.log(err);
             res.status(500).send("Gagal memuat daftar buku");
+        }
+    },
+
+    exportToExcel: async (req, res) => {
+        try {
+            const books = await Book.findAll({
+                include: [
+                    { model: Category },
+                    { model: Author, as: 'Authors' },
+                    { model: Publisher, as: 'Publishers' },
+                    { model: Subject, as: 'Subjects' },
+                    { model: BookCopy, as: 'copies' }
+                ],
+                order: [['id', 'ASC']]
+            });
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Data Lengkap Buku');
+
+            worksheet.columns = [
+                { header: 'ID', key: 'id', width: 5 },
+                { header: 'Judul Buku', key: 'title', width: 35 },
+                { header: 'Edisi', key: 'edition', width: 15 },
+                { header: 'Tahun Terbit', key: 'publish_year', width: 12 },
+                { header: 'Tempat Terbit', key: 'publish_place', width: 20 },
+                { header: 'Deskripsi Fisik', key: 'physical_description', width: 25 },
+                { header: 'ISBN', key: 'isbn', width: 20 },
+                { header: 'No. Panggil', key: 'call_number', width: 20 },
+                { header: 'Bahasa', key: 'language', width: 15 },
+                { header: 'Lokasi Rak', key: 'shelf_location', width: 15 },
+                { header: 'Kategori', key: 'category', width: 20 },
+                { header: 'Pengarang', key: 'authors', width: 30 },
+                { header: 'Penerbit', key: 'publishers', width: 30 },
+                { header: 'Subjek', key: 'subjects', width: 30 },
+                { header: 'Nomor Induk (Copies)', key: 'no_induk', width: 40 },
+                { header: 'Total Stok', key: 'stock_total', width: 12 },
+                { header: 'Catatan', key: 'notes', width: 30 },
+                { header: 'Abstrak', key: 'abstract', width: 50 }
+            ];
+
+            books.forEach(book => {
+                worksheet.addRow({
+                    id: book.id,
+                    title: book.title,
+                    edition: book.edition || '-',
+                    publish_year: book.publish_year,
+                    publish_place: book.publish_place,
+                    physical_description: book.physical_description,
+                    isbn: book.isbn,
+                    call_number: book.call_number,
+                    language: book.language,
+                    shelf_location: book.shelf_location,
+                    category: book.Category ? book.Category.name : '-',
+                    authors: book.Authors ? book.Authors.map(a => a.name).join(', ') : '-',
+                    publishers: book.Publishers ? book.Publishers.map(p => p.name).join(', ') : '-',
+                    subjects: book.Subjects ? book.Subjects.map(s => s.name).join(', ') : '-',
+                    no_induk: book.copies ? book.copies.map(c => c.no_induk).join(', ') : '-',
+                    stock_total: book.copies ? book.copies.length : 0,
+                    notes: book.notes || '-',
+                    abstract: book.abstract || '-'
+                });
+            });
+
+            worksheet.getRow(1).font = { bold: true };
+
+            res.setHeader(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+            res.setHeader(
+                'Content-Disposition',
+                'attachment; filename=' + 'Export_Buku_Lengkap_' + Date.now() + '.xlsx'
+            );
+
+            await workbook.xlsx.write(res);
+            res.status(200).end();
+
+        } catch (err) {
+            console.error("Export Error:", err);
+            res.status(500).send("Gagal mengekspor data: " + err.message);
+        }
+    },
+    
+    downloadTemplate: async (req, res) => {
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Template Import Buku');
+
+            worksheet.columns = [
+                { header: 'Judul Buku*', key: 'title', width: 30 },
+                { header: 'Edisi', key: 'edition', width: 10 },
+                { header: 'Tahun Terbit', key: 'publish_year', width: 12 },
+                { header: 'Tempat Terbit', key: 'publish_place', width: 20 },
+                { header: 'Deskripsi Fisik', key: 'physical_description', width: 25 },
+                { header: 'ISBN', key: 'isbn', width: 20 },
+                { header: 'No Panggil', key: 'call_number', width: 15 },
+                { header: 'Bahasa', key: 'language', width: 15 },
+                { header: 'Lokasi Rak', key: 'shelf_location', width: 15 },
+                { header: 'Kategori', key: 'category', width: 20 },
+                { header: 'Pengarang (pisahkan dengan koma)', key: 'authors', width: 30 },
+                { header: 'Penerbit (pisahkan dengan koma)', key: 'publishers', width: 30 },
+                { header: 'Subjek (pisahkan dengan koma)', key: 'subjects', width: 30 },
+                { header: 'Nomor Induk (pisahkan dengan koma)', key: 'no_induk', width: 40 },
+                { header: 'Catatan', key: 'notes', width: 30 },
+                { header: 'Abstrak', key: 'abstract', width: 50 }
+            ];
+
+            worksheet.addRow({ title: 'Contoh Judul Buku', category: 'Fiksi', authors: 'Penulis A, Penulis B', no_induk: 'B001, B002' });
+
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename=Template_Import_Buku.xlsx');
+            await workbook.xlsx.write(res);
+            res.end();
+        } catch (err) {
+            res.status(500).send("Gagal mengunduh template");
+        }
+    },
+
+    importExcel: async (req, res) => {
+        try {
+            if (!req.file) return res.status(400).send("Tidak ada file yang diunggah");
+
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(req.file.buffer); 
+            const worksheet = workbook.getWorksheet(1);
+
+            const booksData = [];
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber === 1) return; 
+
+                booksData.push({
+                    title: row.getCell(1).text,
+                    edition: row.getCell(2).text,
+                    publish_year: row.getCell(3).text,
+                    publish_place: row.getCell(4).text,
+                    physical_description: row.getCell(5).text,
+                    isbn: row.getCell(6).text,
+                    call_number: row.getCell(7).text,
+                    language: row.getCell(8).text,
+                    shelf_location: row.getCell(9).text,
+                    categoryName: row.getCell(10).text,
+                    authors: row.getCell(11).text,
+                    publishers: row.getCell(12).text,
+                    subjects: row.getCell(13).text,
+                    noInduk: row.getCell(14).text,
+                    notes: row.getCell(15).text,
+                    abstract: row.getCell(16).text
+                });
+            });
+
+            for (const data of booksData) {
+                if (!data.title) continue;
+
+                let categoryId = null;
+                if (data.categoryName) {
+                    const [cat] = await Category.findOrCreate({ where: { name: data.categoryName } });
+                    categoryId = cat.id;
+                }
+
+                const book = await Book.create({ ...data, category_id: categoryId });
+
+                if (data.noInduk) {
+                    const nos = data.noInduk.split(',').map(n => n.trim()).filter(n => n !== "");
+                    const copyData = nos.map(n => ({ book_id: book.id, no_induk: n, status: 'tersedia' }));
+                    await BookCopy.bulkCreate(copyData);
+                    await book.update({ stock_total: nos.length });
+                }
+
+                const processRel = async (input, Model, setter) => {
+                    if (!input) return;
+                    const names = input.split(',').map(n => n.trim());
+                    const ids = [];
+                    for (const name of names) {
+                        const [obj] = await Model.findOrCreate({ where: { name } });
+                        ids.push(obj.id);
+                    }
+                    await book[setter](ids);
+                };
+
+                await processRel(data.authors, Author, 'setAuthors');
+                await processRel(data.publishers, Publisher, 'setPublishers');
+                await processRel(data.subjects, Subject, 'setSubjects');
+            }
+
+            res.redirect("/admin/books");
+        } catch (err) {
+            console.error(err);
+            res.status(500).send("Gagal mengimport data: " + err.message);
         }
     },
 

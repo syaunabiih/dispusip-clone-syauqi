@@ -1,11 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { isAdminLoggedIn } = require("../middleware/auth"); // CommonJS
+const { isAdminLoggedIn } = require("../middleware/auth");
 const adminBookController = require("../controllers/admin.controller");
 const upload = require("../middleware/imageMiddleware")();
-const { loginPage, loginAction, logoutAction } = require("../controllers/auth.controller"); // CommonJS
+const { loginPage, loginAction, logoutAction } = require("../controllers/auth.controller"); 
 const categoryController = require('../controllers/category.controller');
 const subjectController = require('../controllers/subject.controller');
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const uploadExcel = multer({ storage: storage });
 
 // =========================
 // LOGIN & LOGOUT (TIDAK PERLU SESSION)
@@ -28,6 +31,9 @@ router.use(isAdminLoggedIn);
 // LIST BUKU
 // =========================
 router.get("/books", adminBookController.listBooks);
+router.get("/books/export", adminBookController.exportToExcel);
+router.get("/books/template", adminBookController.downloadTemplate);
+router.post("/books/import", uploadExcel.single("excelFile"), adminBookController.importExcel);
 
 // =========================
 // TAMBAH BUKU
