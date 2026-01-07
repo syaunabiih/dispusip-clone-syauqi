@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
         publish_year: DataTypes.STRING(4),
         publish_place: DataTypes.STRING,
         physical_description: DataTypes.STRING,
-        isbn: DataTypes.STRING(20),
+        isbn: DataTypes.STRING(50),
         call_number: DataTypes.STRING(50),
         abstract: DataTypes.TEXT,
         notes: DataTypes.TEXT,
@@ -42,17 +42,20 @@ module.exports = (sequelize, DataTypes) => {
 
         Book.belongsToMany(models.Author, {
             through: 'BookAuthor',
-            foreignKey: 'book_id'
+            foreignKey: 'book_id',
+            timestamps: true
         });
 
         Book.belongsToMany(models.Publisher, {
             through: 'BookPublisher',
-            foreignKey: 'book_id'
+            foreignKey: 'book_id',
+            timestamps: true
         });
 
         Book.belongsToMany(models.Subject, {
             through: 'BookSubject',
-            foreignKey: 'book_id'
+            foreignKey: 'book_id',
+            timestamps: true
         });
     };
 

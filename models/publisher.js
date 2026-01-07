@@ -11,7 +11,8 @@ module.exports = (sequelize, DataTypes) => {
     Publisher.associate = (models) => {
         Publisher.belongsToMany(models.Book, {
             through: 'BookPublisher',
-            foreignKey: 'publisher_id'
+            foreignKey: 'publisher_id',
+            timestamps: true
         });
     };
 

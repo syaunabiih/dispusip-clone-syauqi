@@ -4,36 +4,48 @@ const ExcelJS = require('exceljs');
 
 module.exports = {
     listBooks: async (req, res) => {
-        try {
-            const q = req.query.q || "";
+    try {
+        const q = req.query.q || "";
+        const page = parseInt(req.query.page) || 1; 
+        const limit = 10;
+        const offset = (page - 1) * limit;
 
-            const totalTitle = await Book.count();
-            const totalBook = await BookCopy.count();
+        const totalTitle = await Book.count();
+        const totalBook = await BookCopy.count();
 
-            const books = await Book.findAll({
-                where: q ? { title: { [Op.like]: `%${q}%` } } : {},
-                include: [
-                    { model: Category },
-                    { model: Author, as: 'Authors' },
-                    { model: Publisher, as: 'Publishers' },
-                    { model: Subject, as: 'Subjects' }
-                ],
-                order: [['id', 'ASC']]
-            });
+        const { count, rows: books } = await Book.findAndCountAll({
+            where: q ? { title: { [Op.like]: `%${q}%` } } : {},
+            include: [
+                { model: Category },
+                { model: Author, as: 'Authors' },
+                { model: Publisher, as: 'Publishers' },
+                { model: Subject, as: 'Subjects' }
+            ],
+            order: [['id', 'DESC']],
+            limit: limit,
+            offset: offset,
+            distinct: true
+        });
 
-            res.render("admin/admin_books_list", {
-                title: "Daftar Buku",
-                books,
-                q,
-                totalTitle,
-                totalBook
-            });
+        const totalPages = Math.ceil(count / limit);
 
-        } catch (err) {
-            console.log(err);
-            res.status(500).send("Gagal memuat daftar buku");
-        }
-    },
+        res.render("admin/admin_books_list", {
+            title: "Daftar Buku",
+            books,
+            q,
+            totalTitle,
+            totalBook,
+            currentPage: page,
+            totalPages: totalPages,
+            limit: limit,
+            query: req.query
+        });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Gagal memuat daftar buku");
+    }
+},
 
     exportToExcel: async (req, res) => {
         try {
@@ -49,69 +61,52 @@ module.exports = {
             });
 
             const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Data Lengkap Buku');
+            const worksheet = workbook.addWorksheet('Data Buku');
 
             worksheet.columns = [
-                { header: 'ID', key: 'id', width: 5 },
                 { header: 'Judul Buku', key: 'title', width: 35 },
-                { header: 'Edisi', key: 'edition', width: 15 },
-                { header: 'Tahun Terbit', key: 'publish_year', width: 12 },
+                { header: 'Edisi', key: 'edition', width: 10 },
+                { header: 'Tahun', key: 'publish_year', width: 10 },
                 { header: 'Tempat Terbit', key: 'publish_place', width: 20 },
-                { header: 'Deskripsi Fisik', key: 'physical_description', width: 25 },
                 { header: 'ISBN', key: 'isbn', width: 20 },
-                { header: 'No. Panggil', key: 'call_number', width: 20 },
-                { header: 'Bahasa', key: 'language', width: 15 },
-                { header: 'Lokasi Rak', key: 'shelf_location', width: 15 },
                 { header: 'Kategori', key: 'category', width: 20 },
                 { header: 'Pengarang', key: 'authors', width: 30 },
                 { header: 'Penerbit', key: 'publishers', width: 30 },
-                { header: 'Subjek', key: 'subjects', width: 30 },
-                { header: 'Nomor Induk (Copies)', key: 'no_induk', width: 40 },
-                { header: 'Total Stok', key: 'stock_total', width: 12 },
-                { header: 'Catatan', key: 'notes', width: 30 },
-                { header: 'Abstrak', key: 'abstract', width: 50 }
+                { header: 'Nomor Induk', key: 'no_induk', width: 25 }, 
+                { header: 'Lokasi Rak', key: 'shelf_location', width: 15 }
             ];
 
             books.forEach(book => {
-                worksheet.addRow({
-                    id: book.id,
-                    title: book.title,
-                    edition: book.edition || '-',
-                    publish_year: book.publish_year,
-                    publish_place: book.publish_place,
-                    physical_description: book.physical_description,
-                    isbn: book.isbn,
-                    call_number: book.call_number,
-                    language: book.language,
-                    shelf_location: book.shelf_location,
-                    category: book.Category ? book.Category.name : '-',
-                    authors: book.Authors ? book.Authors.map(a => a.name).join(', ') : '-',
-                    publishers: book.Publishers ? book.Publishers.map(p => p.name).join(', ') : '-',
-                    subjects: book.Subjects ? book.Subjects.map(s => s.name).join(', ') : '-',
-                    no_induk: book.copies ? book.copies.map(c => c.no_induk).join(', ') : '-',
-                    stock_total: book.copies ? book.copies.length : 0,
-                    notes: book.notes || '-',
-                    abstract: book.abstract || '-'
-                });
+                if (book.copies && book.copies.length > 0) {
+                    book.copies.forEach(copy => {
+                        worksheet.addRow({
+                            title: book.title,
+                            edition: book.edition,
+                            publish_year: book.publish_year,
+                            publish_place: book.publish_place,
+                            isbn: book.isbn,
+                            category: book.Category ? book.Category.name : '-',
+                            authors: book.Authors.map(a => a.name).join(', '),
+                            publishers: book.Publishers.map(p => p.name).join(', '),
+                            no_induk: copy.no_induk,
+                            shelf_location: book.shelf_location
+                        });
+                    });
+                } else {
+                    worksheet.addRow({
+                        title: book.title,
+                        no_induk: '-'
+                    });
+                }
             });
 
             worksheet.getRow(1).font = { bold: true };
-
-            res.setHeader(
-                'Content-Type',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            );
-            res.setHeader(
-                'Content-Disposition',
-                'attachment; filename=' + 'Export_Buku_Lengkap_' + Date.now() + '.xlsx'
-            );
-
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename=Data_Buku_${Date.now()}.xlsx`);
             await workbook.xlsx.write(res);
-            res.status(200).end();
-
+            res.end();
         } catch (err) {
-            console.error("Export Error:", err);
-            res.status(500).send("Gagal mengekspor data: " + err.message);
+            res.status(500).send("Gagal Export: " + err.message);
         }
     },
     
@@ -158,12 +153,14 @@ module.exports = {
             await workbook.xlsx.load(req.file.buffer); 
             const worksheet = workbook.getWorksheet(1);
 
+            let successCount = 0;
+            let existingCount = 0;
+
             const booksData = [];
             worksheet.eachRow((row, rowNumber) => {
                 if (rowNumber === 1) return; 
-
                 booksData.push({
-                    title: row.getCell(1).text,
+                    title: row.getCell(1).text.trim(),
                     edition: row.getCell(2).text,
                     publish_year: row.getCell(3).text,
                     publish_place: row.getCell(4).text,
@@ -186,29 +183,66 @@ module.exports = {
                 if (!data.title) continue;
 
                 let categoryId = null;
-                if (data.categoryName) {
-                    const [cat] = await Category.findOrCreate({ where: { name: data.categoryName } });
-                    categoryId = cat.id;
+                const finalCategoryName = (data.categoryName && data.categoryName.trim() !== "") 
+                                          ? data.categoryName.trim() 
+                                          : 'Tanpa Kategori';
+                
+                const [cat] = await Category.findOrCreate({ 
+                    where: { name: finalCategoryName } 
+                });
+                categoryId = cat.id;
+                const [book, created] = await Book.findOrCreate({
+                    where: { title: data.title },
+                    defaults: { 
+                        ...data, 
+                        category_id: categoryId 
+                    }
+                });
+
+                if (created) {
+                    successCount++;
+                } else {
+                    existingCount++;
                 }
 
-                const book = await Book.create({ ...data, category_id: categoryId });
-
                 if (data.noInduk) {
-                    const nos = data.noInduk.split(',').map(n => n.trim()).filter(n => n !== "");
-                    const copyData = nos.map(n => ({ book_id: book.id, no_induk: n, status: 'tersedia' }));
-                    await BookCopy.bulkCreate(copyData);
-                    await book.update({ stock_total: nos.length });
+                    const nos = data.noInduk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
+                    
+                    for (const n of nos) {
+                        try {
+                            const [copy, copyCreated] = await BookCopy.findOrCreate({
+                                where: { no_induk: n }, 
+                                defaults: { 
+                                    book_id: book.id, 
+                                    status: 'tersedia' 
+                                }
+                            });
+
+                        } catch (copyErr) {
+                            console.log(`---> Skip Nomor Induk [${n}]: Sudah digunakan oleh buku lain.`);
+                            continue; 
+                        }
+                    }
+                    
+                    const countTotal = await BookCopy.count({ where: { book_id: book.id } });
+                    await book.update({ stock_total: countTotal });
                 }
 
                 const processRel = async (input, Model, setter) => {
                     if (!input) return;
-                    const names = input.split(',').map(n => n.trim());
+                    const names = input.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
                     const ids = [];
                     for (const name of names) {
                         const [obj] = await Model.findOrCreate({ where: { name } });
                         ids.push(obj.id);
                     }
-                    await book[setter](ids);
+                    
+                    const addMethod = setter.replace('set', 'add');
+                    if (book[addMethod]) {
+                        await book[addMethod](ids);
+                    } else {
+                        await book[setter](ids);
+                    }
                 };
 
                 await processRel(data.authors, Author, 'setAuthors');
@@ -216,13 +250,45 @@ module.exports = {
                 await processRel(data.subjects, Subject, 'setSubjects');
             }
 
-            res.redirect("/admin/books");
+            res.redirect(`/admin/books?importSuccess=${successCount}&importExisting=${existingCount}`);
         } catch (err) {
             console.error(err);
             res.status(500).send("Gagal mengimport data: " + err.message);
         }
     },
+    
 
+    deleteMultiple: async (req, res) => {
+        try {
+            const { bookIds, confirmation, deleteAll } = req.body;
+            
+            // 1. Logika HAPUS SEMUA
+            if (deleteAll === 'true') {
+                if (confirmation !== "HAPUS SEMUA") {
+                    return res.status(400).send("Konfirmasi salah untuk hapus seluruh data.");
+                }
+                // Hapus semua data di tabel Book
+                await Book.destroy({ where: {}, truncate: false }); // Gunakan truncate: true jika ingin reset ID jadi 1, tapi biasanya destroy saja cukup
+                return res.redirect("/admin/books?deleteSuccess=all");
+            }
+
+            // 2. Logika HAPUS YANG DIPILIH SAJA
+            if (confirmation !== "HAPUS DATA") {
+                return res.status(400).send("Konfirmasi salah.");
+            }
+
+            const idsToDelete = Array.isArray(bookIds) ? bookIds : [bookIds];
+            if (!idsToDelete || idsToDelete.length === 0) return res.redirect("/admin/books");
+
+            await Book.destroy({
+                where: { id: { [Op.in]: idsToDelete } }
+            });
+
+            res.redirect("/admin/books?deleteSuccess=" + idsToDelete.length);
+        } catch (err) {
+            res.status(500).send("Gagal menghapus data");
+        }
+    },
     // =========================
     // SHOW HALAMAN TAMBAH BUKU
     // =========================

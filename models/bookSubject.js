@@ -3,6 +3,6 @@ module.exports = (sequelize, DataTypes) => {
         book_id: DataTypes.INTEGER,
         subject_id: DataTypes.INTEGER
     }, {
-        timestamps: false
+        timestamps: true
     });
 };

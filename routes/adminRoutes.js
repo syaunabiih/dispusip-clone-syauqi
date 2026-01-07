@@ -78,6 +78,8 @@ router.post('/subjects/add', subjectController.addSubject);
 router.post('/subjects/edit/:id', subjectController.updateSubject);
 router.get('/subjects/delete/:id', subjectController.deleteSubject);
 
+router.post('/books/delete-multiple', adminBookController.deleteMultiple);
+
 
 
 module.exports = router;

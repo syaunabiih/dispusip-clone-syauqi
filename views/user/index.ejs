@@ -160,13 +160,60 @@
 
             <!-- PAGINATION -->
             <% if (totalPages > 1) { %>
-                <div class="mt-8 flex justify-center gap-1">
-                    <% for (let i = 1; i <= totalPages; i++) { %>
-                        <a href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&year=<%= query.year %>&page=<%= i %>"
-                            class="px-3 py-1 border rounded text-sm <%= currentPage == i ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' %>">
-                            <%= i %>
+                <div class="mt-8 flex flex-wrap justify-center items-center gap-1">
+                    
+                    <% if (currentPage > 1) { %>
+                        <a href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&year=<%= query.year %>&page=<%= parseInt(currentPage) - 1 %>"
+                        class="px-3 py-1 border rounded text-sm bg-white text-gray-600 hover:bg-blue-50">
+                        <i class="fas fa-chevron-left"></i>
                         </a>
                     <% } %>
+
+                    <% 
+                        let delta = 2; // Menampilkan 2 halaman di kiri dan 2 di kanan active page
+                        let left = parseInt(currentPage) - delta;
+                        let right = parseInt(currentPage) + delta;
+                        let range = [];
+                        let rangeWithDots = [];
+                        let l;
+
+                        for (let i = 1; i <= totalPages; i++) {
+                            if (i == 1 || i == totalPages || (i >= left && i <= right)) {
+                                range.push(i);
+                            }
+                        }
+
+                        for (let i of range) {
+                            if (l) {
+                                if (i - l === 2) {
+                                    rangeWithDots.push(l + 1);
+                                } else if (i - l !== 1) {
+                                    rangeWithDots.push('...');
+                                }
+                            }
+                            rangeWithDots.push(i);
+                            l = i;
+                        }
+                    %>
+
+                    <% rangeWithDots.forEach(i => { %>
+                        <% if (i === '...') { %>
+                            <span class="px-3 py-1 text-gray-400">...</span>
+                        <% } else { %>
+                            <a href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&year=<%= query.year %>&page=<%= i %>"
+                            class="px-3 py-1 border rounded text-sm transition-colors <%= currentPage == i ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-gray-600 hover:bg-blue-50' %>">
+                                <%= i %>
+                            </a>
+                        <% } %>
+                    <% }) %>
+
+                    <% if (currentPage < totalPages) { %>
+                        <a href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&year=<%= query.year %>&page=<%= parseInt(currentPage) + 1 %>"
+                        class="px-3 py-1 border rounded text-sm bg-white text-gray-600 hover:bg-blue-50">
+                        <i class="fas fa-chevron-right"></i>
+                        </a>
+                    <% } %>
+
                 </div>
             <% } %>
 
