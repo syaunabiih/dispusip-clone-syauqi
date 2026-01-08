@@ -10,7 +10,7 @@ module.exports = {
       },
 
       title: { 
-        type: Sequelize.STRING, 
+        type: Sequelize.STRING(500), 
         allowNull: false 
       },
 

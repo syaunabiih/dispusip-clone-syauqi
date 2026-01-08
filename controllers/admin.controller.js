@@ -179,6 +179,38 @@ module.exports = {
                 });
             });
 
+            const processRel = async (book, input, Model, setter) => {
+                if (input === null || input === undefined) return;
+
+                // ⛑️ paksa jadi string
+                const safeInput = String(input).trim();
+                if (!safeInput) return;
+
+                const names = safeInput
+                    .split(/[\n,]+/)
+                    .map(n => n.trim())
+                    .filter(n => n.length > 0);
+
+                const ids = [];
+
+                for (const name of names) {
+                    if (name.length > 191) {
+                        console.log(`⚠️ Skip terlalu panjang: ${name}`);
+                        continue;
+                    }
+
+                    const [obj] = await Model.findOrCreate({
+                        where: { name }
+                    });
+
+                    ids.push(obj.id);
+                }
+
+                if (ids.length && typeof book[setter] === 'function') {
+                    await book[setter](ids);
+                }
+            };
+
             for (const data of booksData) {
                 if (!data.title) continue;
 
@@ -193,9 +225,19 @@ module.exports = {
                 categoryId = cat.id;
                 const [book, created] = await Book.findOrCreate({
                     where: { title: data.title },
-                    defaults: { 
-                        ...data, 
-                        category_id: categoryId 
+                    defaults: {
+                        title: data.title,
+                        edition: data.edition,
+                        publish_year: data.publish_year,
+                        publish_place: data.publish_place,
+                        physical_description: data.physical_description,
+                        isbn: data.isbn,
+                        call_number: data.call_number,
+                        language: data.language,
+                        shelf_location: data.shelf_location,
+                        notes: data.notes,
+                        abstract: data.abstract,
+                        category_id: categoryId
                     }
                 });
 
@@ -228,26 +270,39 @@ module.exports = {
                     await book.update({ stock_total: countTotal });
                 }
 
-                const processRel = async (input, Model, setter) => {
+                const processAuthors = async (input) => {
                     if (!input) return;
-                    const names = input.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
+
+                    const authors = input
+                        .replace(/\(pengarang\)/gi, ',')
+                        .replace(/\(editor\)/gi, ',')
+                        .split(/[\n,]+/)
+                        .map(a => a.trim())
+                        .filter(a => a.length > 0);
+
                     const ids = [];
-                    for (const name of names) {
-                        const [obj] = await Model.findOrCreate({ where: { name } });
-                        ids.push(obj.id);
+
+                    for (const name of authors) {
+                        if (name.length > 191) {
+                            console.log(`⚠️ Skip author terlalu panjang: ${name}`);
+                            continue;
+                        }
+
+                        const [author] = await Author.findOrCreate({
+                            where: { name }
+                        });
+
+                        ids.push(author.id);
                     }
-                    
-                    const addMethod = setter.replace('set', 'add');
-                    if (book[addMethod]) {
-                        await book[addMethod](ids);
-                    } else {
-                        await book[setter](ids);
+
+                    if (ids.length) {
+                        await book.setAuthors(ids);
                     }
                 };
 
-                await processRel(data.authors, Author, 'setAuthors');
-                await processRel(data.publishers, Publisher, 'setPublishers');
-                await processRel(data.subjects, Subject, 'setSubjects');
+                await processAuthors(data.authors);
+                await processRel(book, data.publishers, Publisher, 'setPublishers');
+                await processRel(book, data.subjects, Subject, 'setSubjects');
             }
 
             res.redirect(`/admin/books?importSuccess=${successCount}&importExisting=${existingCount}`);
