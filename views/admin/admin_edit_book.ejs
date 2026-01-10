@@ -121,10 +121,75 @@
         <label class="font-medium">Bahasa</label>
         <input type="text" name="language" value="<%= book.language %>" class="w-full p-2 border rounded">
     </div>
+</div>
 
-    <div>
-        <label class="font-medium">Lokasi Rak</label>
-        <input type="text" name="shelf_location" value="<%= book.shelf_location %>" class="w-full p-2 border rounded">
+<!-- LOKASI RAK (POPUP MAP) -->
+<div>
+    <label class="font-medium mb-2 block">Lokasi Rak</label>
+    <div class="flex items-center gap-3">
+        <!-- Hidden input untuk menyimpan nilai shelf_location -->
+        <input type="hidden" name="shelf_location" id="shelf_location" value="<%= book.shelf_location || '' %>">
+        <!-- Display nilai yang dipilih -->
+        <div 
+            id="shelf-location-display" 
+            class="flex-1 p-2 border border-gray-300 rounded <%= book.shelf_location ? 'bg-blue-50 text-blue-800 font-medium' : 'bg-gray-50 text-gray-600' %>"
+        >
+            <span id="shelf-location-text"><%= book.shelf_location || 'Belum dipilih' %></span>
+        </div>
+        <!-- Tombol untuk membuka popup -->
+        <button 
+            type="button" 
+            id="open-shelf-map-btn"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+            <i class="fas fa-map-marked-alt mr-2"></i>Tambah Lokasi
+        </button>
+    </div>
+</div>
+
+<!-- POPUP/MODAL MAP RAK -->
+<div id="shelf-map-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <!-- Header Modal -->
+        <div class="bg-gray-100 px-6 py-4 border-b flex justify-between items-center">
+            <h3 class="font-bold text-gray-700 flex items-center">
+                <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i> Pilih Lokasi Rak
+            </h3>
+            <button 
+                type="button" 
+                id="close-shelf-map-modal"
+                class="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            >
+                &times;
+            </button>
+        </div>
+        <!-- Body Modal (Map) -->
+        <div class="p-6">
+            <p class="text-sm text-gray-600 mb-4">
+                Klik pada rak di denah di bawah ini untuk memilih lokasi rak buku.
+            </p>
+            <!-- Include map interaktif di dalam popup -->
+            <div id="shelf-map-popup-container">
+                <%- include('partials/shelfMapInteractive', { inputFieldId: 'shelf_location', isPopup: true }) %>
+            </div>
+        </div>
+        <!-- Footer Modal -->
+        <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+            <button 
+                type="button" 
+                id="cancel-shelf-map-btn"
+                class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+            >
+                Batal
+            </button>
+            <button 
+                type="button" 
+                id="confirm-shelf-map-btn"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+                Simpan
+            </button>
+        </div>
     </div>
 </div>
 
@@ -187,12 +252,15 @@
 </form>
 
 <script>
-    function initTomSelect(selector, placeholderText) {
-        new TomSelect(selector, {
+    console.log('=== SCRIPT ADMIN_EDIT_BOOK DIMUAT ===');
+    
+    function initTomSelect(selector, placeholderText, isMultiple = true) {
+        return new TomSelect(selector, {
             plugins: ['remove_button'],
             create: true,
             sortField: { field: "text", direction: "asc" },
-            placeholder: placeholderText
+            placeholder: placeholderText,
+            allowEmptyOption: !isMultiple
         });
     }
 
@@ -212,6 +280,351 @@
             coverInput.value = "";           // reset input
         });
     }
+
+    // ================= POPUP MAP RAK =================
+    console.log('=== SETUP POPUP MAP RAK ===');
+    const shelfMapModal = document.getElementById('shelf-map-modal');
+    const openShelfMapBtn = document.getElementById('open-shelf-map-btn');
+    const closeShelfMapModal = document.getElementById('close-shelf-map-modal');
+    const cancelShelfMapBtn = document.getElementById('cancel-shelf-map-btn');
+    const confirmShelfMapBtn = document.getElementById('confirm-shelf-map-btn');
+    const shelfLocationInput = document.getElementById('shelf_location');
+    const shelfLocationText = document.getElementById('shelf-location-text');
+    const shelfLocationDisplay = document.getElementById('shelf-location-display');
+    
+    console.log('shelfMapModal:', shelfMapModal);
+    console.log('openShelfMapBtn:', openShelfMapBtn);
+    console.log('shelfLocationInput:', shelfLocationInput);
+    console.log('shelfLocationInput.value:', shelfLocationInput ? shelfLocationInput.value : 'N/A');
+
+    // Variabel untuk menyimpan nilai sementara saat di popup
+    let tempShelfLocation = '';
+
+    // Fungsi untuk update display lokasi rak
+    function updateShelfLocationDisplay(value) {
+        if (value && value.trim() !== '') {
+            shelfLocationText.textContent = value;
+            shelfLocationDisplay.classList.remove('bg-gray-50', 'text-gray-600');
+            shelfLocationDisplay.classList.add('bg-blue-50', 'text-blue-800', 'font-medium');
+        } else {
+            shelfLocationText.textContent = 'Belum dipilih';
+            shelfLocationDisplay.classList.remove('bg-blue-50', 'text-blue-800', 'font-medium');
+            shelfLocationDisplay.classList.add('bg-gray-50', 'text-gray-600');
+        }
+    }
+
+    // Fungsi untuk highlight rak secara langsung
+    function highlightRackDirectly(value) {
+        console.log('=== highlightRackDirectly DIPANGGIL ===');
+        console.log('Nilai:', value);
+        
+        if (!value || !value.trim()) {
+            console.log('Tidak ada nilai');
+            return false;
+        }
+        
+        const mapContainer = document.getElementById('shelf-map-container');
+        if (!mapContainer) {
+            console.error('Map container tidak ditemukan');
+            return false;
+        }
+        
+        // Ekstrak rak ID dari format "Rak A1" atau "A1"
+        const match = value.trim().match(/Rak\s*([A-H][12])/i) || value.trim().match(/^([A-H][12])$/i);
+        if (!match || !match[1]) {
+            console.error('Tidak ada rak ID yang cocok untuk nilai:', value);
+            return false;
+        }
+        
+        const rackId = match[1].toUpperCase().trim();
+        console.log('Mencari rak dengan ID (trimmed & uppercase):', rackId, '| Length:', rackId.length);
+        
+        const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
+        console.log('Jumlah rak ditemukan:', allRacks.length);
+        
+        // Log semua rak ID untuk debugging
+        console.log('Daftar semua rak ID:');
+        allRacks.forEach((rack, idx) => {
+            const id = rack.getAttribute('data-rack-id');
+            console.log(`  ${idx + 1}. "${id}" (length: ${id ? id.length : 0}, charCodes: ${id ? Array.from(id).map(c => c.charCodeAt(0)).join(',') : 'N/A'})`);
+        });
+        
+        if (allRacks.length === 0) {
+            console.warn('Tidak ada rak ditemukan di map');
+            return false;
+        }
+        
+        let found = false;
+        allRacks.forEach((rack, index) => {
+            let currentRackId = rack.getAttribute('data-rack-id');
+            // Hapus tanda kutip ganda jika ada (char code 34)
+            if (currentRackId) {
+                currentRackId = currentRackId.replace(/^["']+|["']+$/g, '').trim();
+            }
+            // Pastikan trim dan uppercase untuk perbandingan yang benar
+            const currentRackIdClean = currentRackId ? currentRackId.toUpperCase() : '';
+            const rackIdClean = rackId.trim().toUpperCase();
+            const isSelected = currentRackIdClean === rackIdClean;
+            
+            console.log(`Rak ${index + 1}: ID = "${rack.getAttribute('data-rack-id')}" (cleaned: "${currentRackIdClean}"), mencari: "${rackIdClean}", isSelected = ${isSelected}`);
+            
+            if (isSelected) {
+                found = true;
+                console.log('✓ Menerapkan highlight pada rak:', currentRackId);
+                
+                // Hapus semua class yang mungkin konflik
+                rack.className = rack.className.replace(/bg-\w+-\d+/g, '').replace(/text-\w+-\d+/g, '').replace(/border-\w+-\d+/g, '').trim();
+                
+                // Tambahkan class highlight
+                rack.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                
+                // Set inline style dengan !important
+                rack.style.setProperty('background-color', '#2563eb', 'important');
+                rack.style.setProperty('color', '#ffffff', 'important');
+                rack.style.setProperty('border-color', '#1e3a8a', 'important');
+                rack.style.setProperty('border-width', '2px', 'important');
+                rack.style.setProperty('border-style', 'solid', 'important');
+                rack.style.setProperty('z-index', '10', 'important');
+                rack.style.setProperty('box-shadow', '0 0 15px rgba(37,99,235,0.6)', 'important');
+                
+                // Force reflow
+                void rack.offsetHeight;
+                
+                // Verifikasi
+                const computedBg = window.getComputedStyle(rack).backgroundColor;
+                console.log('Computed background color:', computedBg);
+            } else {
+                // Reset rak yang tidak dipilih
+                rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                rack.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                rack.style.removeProperty('background-color');
+                rack.style.removeProperty('color');
+                rack.style.removeProperty('border-color');
+                rack.style.removeProperty('border-width');
+                rack.style.removeProperty('border-style');
+                rack.style.removeProperty('z-index');
+                rack.style.removeProperty('box-shadow');
+            }
+        });
+        
+        // Update indicator
+        if (found) {
+            const indicator = document.getElementById('selected-rack-indicator');
+            const label = document.getElementById('selected-rack-label');
+            if (indicator && label) {
+                label.textContent = rackId;
+                indicator.classList.remove('hidden');
+                console.log('✓ Indicator di-update ke', rackId);
+            }
+        } else {
+            console.error('✗ Rak dengan ID', rackId, 'TIDAK DITEMUKAN!');
+        }
+        
+        console.log('=== highlightRackDirectly SELESAI ===');
+        return found;
+    }
+
+    // Buka popup
+    console.log('=== SETUP EVENT LISTENER ===');
+    console.log('openShelfMapBtn:', openShelfMapBtn);
+    console.log('shelfLocationInput:', shelfLocationInput);
+    console.log('shelfLocationInput.value:', shelfLocationInput ? shelfLocationInput.value : 'N/A');
+    
+    if (openShelfMapBtn) {
+        console.log('Event listener akan dipasang pada openShelfMapBtn');
+        openShelfMapBtn.addEventListener('click', () => {
+            console.log('=== TOMBOL TAMBAH LOKASI DIKLIK ===');
+            
+            // Simpan nilai saat ini sebagai nilai sementara
+            tempShelfLocation = shelfLocationInput.value || '';
+            console.log('Nilai awal dari input:', tempShelfLocation);
+            
+            // Pastikan format nilai benar (jika hanya "C1", tambahkan "Rak ")
+            if (tempShelfLocation && !tempShelfLocation.match(/^Rak\s+/i)) {
+                const match = tempShelfLocation.match(/^([A-H][12])$/i);
+                if (match) {
+                    tempShelfLocation = 'Rak ' + match[1];
+                    shelfLocationInput.value = tempShelfLocation;
+                    console.log('Nilai di-format ulang ke:', tempShelfLocation);
+                }
+            }
+            
+            shelfMapModal.classList.remove('hidden');
+            shelfMapModal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            console.log('Modal dibuka');
+            
+            // Gunakan requestAnimationFrame untuk memastikan DOM sudah ter-update
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    console.log('=== REQUESTANIMATIONFRAME DIPANGGIL ===');
+                    const mapContainer = document.getElementById('shelf-map-container');
+                    console.log('Map container:', mapContainer);
+                    
+                    if (!mapContainer) {
+                        console.error('Map container TIDAK DITEMUKAN!');
+                        return;
+                    }
+                    
+                    // Fungsi untuk mencoba highlight dengan multiple attempts
+                    const tryHighlight = () => {
+                        console.log('tryHighlight dipanggil, tempShelfLocation:', tempShelfLocation);
+                        if (tempShelfLocation) {
+                            const success = highlightRackDirectly(tempShelfLocation);
+                            console.log('Hasil highlightRackDirectly:', success);
+                            if (success) {
+                                // Juga trigger event untuk update input field
+                                if (shelfLocationInput.value !== tempShelfLocation) {
+                                    shelfLocationInput.value = tempShelfLocation;
+                                }
+                                const updateEvent = new CustomEvent('shelfLocationUpdated', { 
+                                    detail: { value: tempShelfLocation } 
+                                });
+                                mapContainer.dispatchEvent(updateEvent);
+                            }
+                            return success;
+                        }
+                        return false;
+                    };
+                    
+                    // Cek apakah rak sudah ada
+                    const racks = mapContainer.querySelectorAll('[data-rack-id]');
+                    console.log('Jumlah rak saat ini:', racks.length);
+                    
+                    // Coba langsung
+                    if (!tryHighlight()) {
+                        console.log('Highlight pertama gagal, menggunakan MutationObserver');
+                        // Jika belum berhasil, gunakan MutationObserver
+                        const observer = new MutationObserver((mutations, obs) => {
+                            const racks = mapContainer.querySelectorAll('[data-rack-id]');
+                            console.log('MutationObserver: Jumlah rak sekarang:', racks.length);
+                            if (racks.length > 0) {
+                                if (tryHighlight()) {
+                                    console.log('Highlight berhasil via MutationObserver');
+                                    obs.disconnect();
+                                }
+                            }
+                        });
+                        
+                        observer.observe(mapContainer, {
+                            childList: true,
+                            subtree: true
+                        });
+                        
+                        // Timeout fallback
+                        setTimeout(() => {
+                            console.log('MutationObserver timeout, mencoba highlight sekali lagi');
+                            observer.disconnect();
+                            tryHighlight();
+                        }, 2000);
+                    } else {
+                        console.log('Highlight pertama berhasil!');
+                    }
+                    
+                    // Multiple attempts sebagai backup
+                    console.log('Setup multiple attempts dengan delay');
+                    [50, 100, 200, 300, 500, 700, 1000, 1500].forEach(delay => {
+                        setTimeout(() => {
+                            console.log(`Attempt dengan delay ${delay}ms`);
+                            tryHighlight();
+                        }, delay);
+                    });
+                });
+            });
+        });
+        console.log('Event listener berhasil dipasang');
+    } else {
+        console.error('openShelfMapBtn TIDAK DITEMUKAN!');
+    }
+
+    // Fungsi untuk tutup popup
+    function closeShelfMapPopup(resetValue = false) {
+        if (resetValue && shelfLocationInput.value !== tempShelfLocation) {
+            // Reset ke nilai awal jika dibatalkan
+            shelfLocationInput.value = tempShelfLocation;
+            // Trigger update di map untuk re-highlight
+            setTimeout(() => {
+                const mapContainer = document.getElementById('shelf-map-container');
+                if (mapContainer) {
+                    const event = new CustomEvent('shelfLocationUpdated', { 
+                        detail: { value: tempShelfLocation || '' } 
+                    });
+                    mapContainer.dispatchEvent(event);
+                }
+            }, 50);
+        }
+        shelfMapModal.classList.add('hidden');
+        shelfMapModal.classList.remove('flex');
+        document.body.style.overflow = ''; // Restore body scroll
+    }
+
+    // Tutup popup (X button)
+    if (closeShelfMapModal) {
+        closeShelfMapModal.addEventListener('click', () => {
+            closeShelfMapPopup(true); // Reset nilai
+        });
+    }
+
+    // Batal button
+    if (cancelShelfMapBtn) {
+        cancelShelfMapBtn.addEventListener('click', () => {
+            closeShelfMapPopup(true); // Reset nilai
+        });
+    }
+
+    // Simpan button
+    if (confirmShelfMapBtn) {
+        confirmShelfMapBtn.addEventListener('click', () => {
+            // Nilai sudah ter-update di input field oleh map handler
+            const selectedValue = shelfLocationInput.value;
+            updateShelfLocationDisplay(selectedValue);
+            tempShelfLocation = selectedValue; // Update nilai sementara
+            
+            // Tutup popup tanpa reset
+            closeShelfMapPopup(false);
+        });
+    }
+
+    // Tutup popup saat klik di luar modal
+    if (shelfMapModal) {
+        shelfMapModal.addEventListener('click', (e) => {
+            if (e.target === shelfMapModal) {
+                closeShelfMapPopup(true); // Reset nilai saat klik di luar
+            }
+        });
+    }
+
+    // Update display saat input berubah (dari map handler)
+    if (shelfLocationInput) {
+        shelfLocationInput.addEventListener('change', () => {
+            updateShelfLocationDisplay(shelfLocationInput.value);
+        });
+    }
+
+    // Inisialisasi display
+    if (shelfLocationInput && shelfLocationInput.value) {
+        updateShelfLocationDisplay(shelfLocationInput.value);
+    }
 </script>
+
+<style>
+    /* Styling box yang sama untuk semua select (kategori, penulis, penerbit, subjek) */
+    #category-select + .ts-wrapper .ts-control .item,
+    #author-select + .ts-wrapper .ts-control .item,
+    #publisher-select + .ts-wrapper .ts-control .item,
+    #subject-select + .ts-wrapper .ts-control .item {
+        background-color: #e5e7eb; /* gray-200 */
+        color: #1f2937; /* gray-800 */
+        border: 1px solid #d1d5db; /* gray-300 */
+    }
+    
+    /* Hover state yang sama untuk semua */
+    #category-select + .ts-wrapper .ts-control .item:hover,
+    #author-select + .ts-wrapper .ts-control .item:hover,
+    #publisher-select + .ts-wrapper .ts-control .item:hover,
+    #subject-select + .ts-wrapper .ts-control .item:hover {
+        background-color: #d1d5db; /* gray-300 */
+    }
+</style>
 
 <%- include('partials/footer') %>

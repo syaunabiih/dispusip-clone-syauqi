@@ -91,8 +91,6 @@
         <div>
             <label class="font-medium">Kategori</label>
             <select name="category_id" id="category-select" class="w-full p-2 border rounded">
-                <option value="">-- Pilih Kategori --</option>
-
                 <% categories.forEach(c => { %>
                     <option value="<%= c.id %>"><%= c.name %></option>
                 <% }) %>
@@ -115,10 +113,72 @@
             <label class="font-medium">Bahasa</label>
             <input type="text" name="language" class="w-full p-2 border rounded">
         </div>
+    </div>
 
-        <div>
-            <label class="font-medium">Lokasi Rak</label>
-            <input type="text" name="shelf_location" class="w-full p-2 border rounded">
+    <!-- LOKASI RAK (POPUP MAP) -->
+    <div>
+        <label class="font-medium mb-2 block">Lokasi Rak</label>
+        <div class="flex items-center gap-3">
+            <!-- Hidden input untuk menyimpan nilai shelf_location -->
+            <input type="hidden" name="shelf_location" id="shelf_location" value="">
+            <!-- Display nilai yang dipilih -->
+            <div id="shelf-location-display" class="flex-1 p-2 border border-gray-300 rounded bg-gray-50 text-gray-600">
+                <span id="shelf-location-text">Belum dipilih</span>
+            </div>
+            <!-- Tombol untuk membuka popup -->
+            <button 
+                type="button" 
+                id="open-shelf-map-btn"
+                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+            >
+                <i class="fas fa-map-marked-alt mr-2"></i>Tambah Lokasi
+            </button>
+        </div>
+    </div>
+
+    <!-- POPUP/MODAL MAP RAK -->
+    <div id="shelf-map-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <!-- Header Modal -->
+            <div class="bg-gray-100 px-6 py-4 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-700 flex items-center">
+                    <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i> Pilih Lokasi Rak
+                </h3>
+                <button 
+                    type="button" 
+                    id="close-shelf-map-modal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                    &times;
+                </button>
+            </div>
+            <!-- Body Modal (Map) -->
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">
+                    Klik pada rak di denah di bawah ini untuk memilih lokasi rak buku.
+                </p>
+                <!-- Include map interaktif di dalam popup -->
+                <div id="shelf-map-popup-container">
+                    <%- include('partials/shelfMapInteractive', { inputFieldId: 'shelf_location', isPopup: true }) %>
+                </div>
+            </div>
+            <!-- Footer Modal -->
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button 
+                    type="button" 
+                    id="cancel-shelf-map-btn"
+                    class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+                >
+                    Batal
+                </button>
+                <button 
+                    type="button" 
+                    id="confirm-shelf-map-btn"
+                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                    Simpan
+                </button>
+            </div>
         </div>
     </div>
 
@@ -201,10 +261,10 @@
         });
     }
 
-    initTomSelect("#category-select", "Cari atau tambah kategori...");
+    initTomSelect("#category-select", "Cari atau tambah kategori...", false);
     initTomSelect("#author-select", "Cari atau tambah penulis...");
     initTomSelect("#subject-select", "Cari atau tambah subjek...");
-    initTomSelect("#publisher-select", "Pilih atau tambah penerbit...");
+    initTomSelect("#publisher-select", "Cari atau tambah penerbit...");
 
     const coverInput = document.getElementById('cover-input');
     const coverPreview = document.getElementById('cover-preview');
@@ -225,6 +285,152 @@
         coverInput.classList.remove('hidden');  // munculkan input
         coverPreview.classList.add('hidden');   // sembunyikan preview
     });
+
+    // ================= POPUP MAP RAK =================
+    const shelfMapModal = document.getElementById('shelf-map-modal');
+    const openShelfMapBtn = document.getElementById('open-shelf-map-btn');
+    const closeShelfMapModal = document.getElementById('close-shelf-map-modal');
+    const cancelShelfMapBtn = document.getElementById('cancel-shelf-map-btn');
+    const confirmShelfMapBtn = document.getElementById('confirm-shelf-map-btn');
+    const shelfLocationInput = document.getElementById('shelf_location');
+    const shelfLocationText = document.getElementById('shelf-location-text');
+    const shelfLocationDisplay = document.getElementById('shelf-location-display');
+
+    // Variabel untuk menyimpan nilai sementara saat di popup
+    let tempShelfLocation = '';
+
+    // Fungsi untuk update display lokasi rak
+    function updateShelfLocationDisplay(value) {
+        if (value && value.trim() !== '') {
+            shelfLocationText.textContent = value;
+            shelfLocationDisplay.classList.remove('bg-gray-50', 'text-gray-600');
+            shelfLocationDisplay.classList.add('bg-blue-50', 'text-blue-800', 'font-medium');
+        } else {
+            shelfLocationText.textContent = 'Belum dipilih';
+            shelfLocationDisplay.classList.remove('bg-blue-50', 'text-blue-800', 'font-medium');
+            shelfLocationDisplay.classList.add('bg-gray-50', 'text-gray-600');
+        }
+    }
+
+    // Buka popup
+    if (openShelfMapBtn) {
+        openShelfMapBtn.addEventListener('click', () => {
+            // Simpan nilai saat ini sebagai nilai sementara
+            tempShelfLocation = shelfLocationInput.value || '';
+            shelfMapModal.classList.remove('hidden');
+            shelfMapModal.classList.add('flex');
+            document.body.style.overflow = 'hidden'; // Prevent body scroll
+            
+            // Trigger re-inisialisasi map setelah popup terbuka
+            // Gunakan delay yang lebih lama untuk memastikan map sudah ter-render
+            setTimeout(() => {
+                const mapContainer = document.getElementById('shelf-map-container');
+                if (mapContainer) {
+                    // Trigger event untuk re-inisialisasi highlight
+                    if (shelfLocationInput.value) {
+                        const updateEvent = new CustomEvent('shelfLocationUpdated', { 
+                            detail: { value: shelfLocationInput.value } 
+                        });
+                        mapContainer.dispatchEvent(updateEvent);
+                    }
+                    
+                    // Trigger event popup opened untuk inisialisasi highlight
+                    const popupEvent = new CustomEvent('shelfMapPopupOpened');
+                    window.dispatchEvent(popupEvent);
+                }
+            }, 250);
+        });
+    }
+
+    // Fungsi untuk tutup popup
+    function closeShelfMapPopup(resetValue = false) {
+        if (resetValue && shelfLocationInput.value !== tempShelfLocation) {
+            // Reset ke nilai awal jika dibatalkan
+            shelfLocationInput.value = tempShelfLocation;
+            // Trigger update di map untuk re-highlight
+            setTimeout(() => {
+                const mapContainer = document.getElementById('shelf-map-container');
+                if (mapContainer) {
+                    const event = new CustomEvent('shelfLocationUpdated', { 
+                        detail: { value: tempShelfLocation || '' } 
+                    });
+                    mapContainer.dispatchEvent(event);
+                }
+            }, 50);
+        }
+        shelfMapModal.classList.add('hidden');
+        shelfMapModal.classList.remove('flex');
+        document.body.style.overflow = ''; // Restore body scroll
+    }
+
+    // Tutup popup (X button)
+    if (closeShelfMapModal) {
+        closeShelfMapModal.addEventListener('click', () => {
+            closeShelfMapPopup(true); // Reset nilai
+        });
+    }
+
+    // Batal button
+    if (cancelShelfMapBtn) {
+        cancelShelfMapBtn.addEventListener('click', () => {
+            closeShelfMapPopup(true); // Reset nilai
+        });
+    }
+
+    // Simpan button
+    if (confirmShelfMapBtn) {
+        confirmShelfMapBtn.addEventListener('click', () => {
+            // Nilai sudah ter-update di input field oleh map handler
+            const selectedValue = shelfLocationInput.value;
+            updateShelfLocationDisplay(selectedValue);
+            tempShelfLocation = selectedValue; // Update nilai sementara
+            
+            // Tutup popup tanpa reset
+            closeShelfMapPopup(false);
+        });
+    }
+
+    // Tutup popup saat klik di luar modal
+    if (shelfMapModal) {
+        shelfMapModal.addEventListener('click', (e) => {
+            if (e.target === shelfMapModal) {
+                closeShelfMapPopup(true); // Reset nilai saat klik di luar
+            }
+        });
+    }
+
+    // Update display saat input berubah (dari map handler)
+    if (shelfLocationInput) {
+        shelfLocationInput.addEventListener('change', () => {
+            updateShelfLocationDisplay(shelfLocationInput.value);
+        });
+    }
+
+    // Inisialisasi display
+    if (shelfLocationInput && shelfLocationInput.value) {
+        updateShelfLocationDisplay(shelfLocationInput.value);
+    }
 </script>
+
+<style>
+    /* Styling box yang sama untuk semua select (kategori, penulis, penerbit, subjek) */
+    #category-select + .ts-wrapper .ts-control .item,
+    #author-select + .ts-wrapper .ts-control .item,
+    #publisher-select + .ts-wrapper .ts-control .item,
+    #subject-select + .ts-wrapper .ts-control .item {
+        background-color: #e5e7eb; /* gray-200 */
+        color: #1f2937; /* gray-800 */
+        border: 1px solid #d1d5db; /* gray-300 */
+    }
+    
+    /* Hover state yang sama untuk semua */
+    #category-select + .ts-wrapper .ts-control .item:hover,
+    #author-select + .ts-wrapper .ts-control .item:hover,
+    #publisher-select + .ts-wrapper .ts-control .item:hover,
+    #subject-select + .ts-wrapper .ts-control .item:hover {
+        background-color: #d1d5db; /* gray-300 */
+    }
+</style>
+
 
 <%- include('partials/footer') %>
