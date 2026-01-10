@@ -2,29 +2,30 @@
 
 <h1 class="text-2xl font-bold mb-6">Daftar Subjek</h1>
 
-<form action="/admin/subjects" method="GET" class="mb-6 flex gap-2">
+<form action="/admin/subjects" method="GET" class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
     <input
         type="text"
         name="q"
         value="<%= typeof q !== 'undefined' ? q : '' %>"
         placeholder="Cari subjek..."
-        class="border p-2 rounded w-full">
-    <button class="bg-blue-600 text-white px-4 py-2 rounded">Cari</button>
+        class="border p-2 rounded flex-1">
+    <button class="bg-blue-600 text-white px-4 py-2 rounded whitespace-nowrap">Cari</button>
 </form>
 
-<div class="flex justify-between mb-4">
-    <h2 class="text-xl font-bold">Daftar Subjek</h2>
-    <button onclick="openAddModal()" class="bg-green-600 text-white px-4 py-2 rounded">
+<div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
+    <h2 class="text-xl sm:text-2xl font-bold">Daftar Subjek</h2>
+    <button onclick="openAddModal()" class="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded whitespace-nowrap">
         ➕ Tambah Subjek
     </button>
 </div>
 
+<div class="overflow-x-auto">
 <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
     <thead class="bg-gray-100 text-left">
         <tr>
-            <th class="p-4">No</th>
-            <th class="p-4">Nama Kategori</th>
-            <th class="p-4">Aksi</th>
+            <th class="p-2 sm:p-4">No</th>
+            <th class="p-2 sm:p-4">Nama Subjek</th>
+            <th class="p-2 sm:p-4">Aksi</th>
         </tr>
     </thead>
     <tbody>
@@ -37,9 +38,9 @@
         <% } else { %>
             <% subjects.forEach((subject, index) => { %>
                 <tr class="border-t">
-                    <td class="p-4"><%= index + 1 %></td>
-                    <td class="p-4"><%= subject.name %></td>
-                    <td class="p-4">
+                    <td class="p-2 sm:p-4 text-sm sm:text-base"><%= index + 1 %></td>
+                    <td class="p-2 sm:p-4 text-sm sm:text-base"><%= subject.name %></td>
+                    <td class="p-2 sm:p-4 text-sm sm:text-base">
                         <button
                             class="text-blue-600 hover:underline"
                             data-id="<%= subject.id %>"
@@ -56,30 +57,31 @@
         <% } %>
     </tbody>
 </table>
+</div>
 
 <!-- MODAL ADD -->
-<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
-    <div class="bg-white p-6 rounded w-full max-w-md">
+<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center p-4">
+    <div class="bg-white p-4 sm:p-6 rounded w-full max-w-md">
         <h3 class="font-bold mb-4">Tambah Subjek</h3>
         <form action="/admin/subjects/add" method="POST">
             <input name="name" required class="w-full border p-2 mb-4 rounded">
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeAddModal()">Batal</button>
-                <button class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button>
+            <div class="flex flex-col sm:flex-row justify-end gap-2">
+                <button type="button" onclick="closeAddModal()" class="w-full sm:w-auto px-4 py-2 border rounded transition-colors">Batal</button>
+                <button class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded transition-colors">Simpan</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- MODAL EDIT -->
-<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
-    <div class="bg-white p-6 rounded w-full max-w-md">
+<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center p-4">
+    <div class="bg-white p-4 sm:p-6 rounded w-full max-w-md">
         <h3 class="font-bold mb-4">Edit Subjek</h3>
         <form id="editForm" method="POST">
             <input id="editName" name="name" required class="w-full border p-2 mb-4 rounded">
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeEditModal()">Batal</button>
-                <button class="bg-blue-600 text-white px-4 py-2 rounded">Update</button>
+            <div class="flex flex-col sm:flex-row justify-end gap-2">
+                <button type="button" onclick="closeEditModal()" class="w-full sm:w-auto px-4 py-2 border rounded transition-colors">Batal</button>
+                <button class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded transition-colors">Update</button>
             </div>
         </form>
     </div>

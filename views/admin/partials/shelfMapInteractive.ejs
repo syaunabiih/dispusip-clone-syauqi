@@ -1,10 +1,4 @@
 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-    <div class="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
-        <h3 class="font-bold text-gray-700 flex items-center">
-            <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i> Pilih Lokasi Rak
-        </h3>
-    </div>
-    
     <div class="p-6">
         <% 
             // Ambil parameter isPopup di awal untuk menghindari error
@@ -118,7 +112,7 @@
         <%
             // Tentukan ukuran map berdasarkan apakah ini popup atau tidak
             // Gunakan isPopupParam yang sudah didefinisikan di awal
-            const mapSizeClass = isPopupParam ? 'aspect-[2/1] max-h-[350px]' : 'aspect-[16/9]';
+            const mapSizeClass = isPopupParam ? 'aspect-[2/1] max-h-[300px] sm:max-h-[400px]' : 'aspect-[16/9]';
         %>
         <div 
             id="shelf-map-container" 
@@ -199,44 +193,93 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🗺️ === SHELF MAP INTERACTIVE DIINISIALISASI ===');
+    
     // Ambil inputFieldId dari data attribute container
     const mapContainer = document.getElementById('shelf-map-container');
-    if (!mapContainer) return;
+    console.log('📍 mapContainer:', mapContainer);
     
-    const inputFieldId = mapContainer.getAttribute('data-input-field-id') || 'shelf_location';
-    const inputField = document.getElementById(inputFieldId);
-    
-    if (!inputField) {
-        console.error('Input field dengan ID "' + inputFieldId + '" tidak ditemukan');
+    if (!mapContainer) {
+        console.error('❌ Map container TIDAK DITEMUKAN!');
         return;
     }
+    
+    console.log('✅ Map container ditemukan');
+    const inputFieldId = mapContainer.getAttribute('data-input-field-id') || 'shelf_location';
+    console.log('📍 inputFieldId:', inputFieldId);
+    
+    const inputField = document.getElementById(inputFieldId);
+    console.log('📍 inputField:', inputField);
+    
+    if (!inputField) {
+        console.error('❌ Input field dengan ID "' + inputFieldId + '" tidak ditemukan');
+        return;
+    }
+    
+    console.log('✅ Input field ditemukan');
+    
+    // Cek jumlah rak awal
+    const racks = mapContainer.querySelectorAll('[data-rack-id]');
+    console.log('📊 Jumlah rak awal:', racks.length);
 
     // State untuk rak yang dipilih
     let selectedRackId = null;
     
     // Fungsi untuk update highlight
     function updateHighlight(rackId) {
-        if (!mapContainer) return;
+        console.log('🎨 === updateHighlight DIPANGGIL ===');
+        console.log('📥 Parameter rackId:', rackId);
+        console.log('📥 rackId type:', typeof rackId);
+        
+        if (!mapContainer) {
+            console.error('❌ mapContainer TIDAK ADA!');
+            return;
+        }
         
         // Hapus highlight dari semua rak (hanya dalam mapContainer)
         const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
+        console.log('📊 Total rak ditemukan:', allRacks.length);
         
         const rackIdClean = rackId ? rackId.trim().toUpperCase() : '';
+        console.log('🔍 Mencari rak dengan ID:', rackIdClean);
         
-        allRacks.forEach(rack => {
+        let foundSelected = false;
+        let processedCount = 0;
+        
+        allRacks.forEach((rack, index) => {
             let currentRackId = rack.getAttribute('data-rack-id');
+            console.log(`  Rak #${index + 1}: attribute value = "${currentRackId}"`);
+            
             // Hapus tanda kutip ganda jika ada
             if (currentRackId) {
+                const beforeClean = currentRackId;
                 currentRackId = currentRackId.replace(/^["']+|["']+$/g, '').trim().toUpperCase();
+                if (beforeClean !== currentRackId) {
+                    console.log(`    ⚠️ Dibersihkan dari "${beforeClean}" menjadi "${currentRackId}"`);
+                }
             }
+            
             const isSelected = currentRackId === rackIdClean;
+            console.log(`    ${isSelected ? '✅' : '⚪'} Match: ${currentRackId} === ${rackIdClean}? ${isSelected}`);
             
             if (isSelected) {
-                // Highlight rak yang dipilih - gunakan inline style untuk memastikan ter-apply
-                rack.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                foundSelected = true;
+                console.log(`    🎯 RAK DIPILIH DITEMUKAN!`);
+                console.log(`    📍 Element:`, rack);
+                console.log(`    📍 TagName:`, rack.tagName);
+                console.log(`    📍 Classes sebelum:`, rack.className);
+                
+                // Hapus semua class yang mungkin konflik
+                rack.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border', 
+                                     'bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 
+                                     'animate-pulse', 'z-10', 'bg-gray-200', 'bg-gray-400');
+                
+                // Tambah class highlight
                 rack.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                console.log(`    📍 Classes setelah:`, rack.className);
                 
                 // Set inline style dengan !important untuk memastikan warna ter-apply
+                console.log(`    🎨 Mengaplikasikan inline styles...`);
                 rack.style.setProperty('background-color', '#2563eb', 'important'); // blue-600
                 rack.style.setProperty('color', '#ffffff', 'important');
                 rack.style.setProperty('border-color', '#1e3a8a', 'important'); // blue-800
@@ -244,6 +287,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 rack.style.setProperty('border-style', 'solid', 'important');
                 rack.style.setProperty('z-index', '10', 'important');
                 rack.style.setProperty('box-shadow', '0 0 15px rgba(37,99,235,0.6)', 'important');
+                
+                // Verifikasi style ter-apply
+                const computedBg = window.getComputedStyle(rack).backgroundColor;
+                const computedColor = window.getComputedStyle(rack).color;
+                console.log(`    ✅ Computed background-color:`, computedBg);
+                console.log(`    ✅ Computed color:`, computedColor);
+                console.log(`    ✅ Inline style background-color:`, rack.style.backgroundColor);
+                console.log(`    ✅ Inline style color:`, rack.style.color);
+                
+                // Force reflow untuk memastikan style ter-apply
+                void rack.offsetHeight;
+                console.log(`    ✅ Reflow dipaksa`);
+                
             } else {
                 // Reset rak yang tidak dipilih
                 rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
@@ -258,68 +314,182 @@ document.addEventListener('DOMContentLoaded', function() {
                 rack.style.removeProperty('z-index');
                 rack.style.removeProperty('box-shadow');
             }
+            processedCount++;
         });
+        
+        console.log(`📊 Total rak diproses: ${processedCount}`);
+        console.log(`🎯 Rak yang dipilih ditemukan: ${foundSelected ? '✅ YA' : '❌ TIDAK'}`);
         
         // Update indicator
         const indicator = document.getElementById('selected-rack-indicator');
         const label = document.getElementById('selected-rack-label');
         if (indicator && label) {
             if (rackId) {
-                label.textContent = rackId;
+                label.textContent = rackIdClean;
                 indicator.classList.remove('hidden');
+                console.log('✅ Indicator di-update ke:', rackIdClean);
             } else {
                 indicator.classList.add('hidden');
+                console.log('✅ Indicator disembunyikan');
             }
+        } else {
+            console.warn('⚠️ Indicator atau label tidak ditemukan');
         }
+        
+        console.log('🎨 === updateHighlight SELESAI ===');
     }
     
     // Event listener untuk klik rak
     if (mapContainer) {
+        console.log('✅ Event listener untuk klik rak dipasang pada mapContainer');
         mapContainer.addEventListener('click', function(e) {
+            console.log('🖱️ ========================================');
+            console.log('🖱️ === CLICK EVENT DIPANGGIL ===');
+            console.log('🖱️ ========================================');
+            console.log('🖱️ Timestamp:', new Date().toISOString());
+            console.log('🖱️ selectedRackId SEBELUM click:', selectedRackId);
+            console.log('🖱️ inputField.value SEBELUM click:', inputField.value);
+            console.log('🖱️ Target element:', e.target);
+            console.log('🖱️ Target tagName:', e.target.tagName);
+            console.log('🖱️ Target classes:', e.target.className);
+            
             // Cari elemen rak yang diklik (bisa rak itu sendiri atau child-nya)
             let rackElement = e.target.closest('[data-rack-id]');
+            console.log('🖱️ Rack element ditemukan:', rackElement);
             
             if (rackElement) {
                 const rackId = rackElement.getAttribute('data-rack-id');
+                console.log('🖱️ 📦 Rack ID dari attribute:', rackId);
+                console.log('🖱️ 📦 Rack ID type:', typeof rackId);
+                console.log('🖱️ 📦 Rack ID length:', rackId ? rackId.length : 0);
+                
                 if (rackId) {
-                    selectedRackId = rackId;
+                    // Clean rackId dari quotes
+                    const cleanRackId = rackId.replace(/^["']+|["']+$/g, '').trim();
+                    console.log('🖱️ 📦 Clean Rack ID:', cleanRackId);
+                    
+                    // Update selectedRackId SEBELUM update highlight untuk mencegah initializeHighlight me-reset
+                    const oldSelectedRackId = selectedRackId;
+                    selectedRackId = cleanRackId;
+                    console.log('🖱️ ✅ selectedRackId di-update dari:', oldSelectedRackId, 'ke:', selectedRackId);
                     
                     // Update input field dengan format "Rak [LABEL]"
-                    const shelfValue = 'Rak ' + rackId;
+                    const oldInputValue = inputField.value;
+                    const shelfValue = 'Rak ' + cleanRackId;
                     inputField.value = shelfValue;
+                    console.log('🖱️ ✅ Input field di-update dari:', oldInputValue, 'ke:', shelfValue);
                     
                     // Update highlight
-                    updateHighlight(rackId);
+                    console.log('🖱️ 🎨 Memanggil updateHighlight dengan:', cleanRackId);
+                    updateHighlight(cleanRackId);
+                    console.log('🖱️ ✅ updateHighlight SELESAI dipanggil');
                     
-                    // Trigger change event untuk notifikasi jika diperlukan
+                    // Trigger custom event untuk memberitahu admin_edit_book.ejs bahwa user sudah klik rak baru
+                    // Ini akan update tempShelfLocation di admin_edit_book.ejs
+                    const userClickedEvent = new CustomEvent('userClickedRack', {
+                        detail: { value: shelfValue, rackId: cleanRackId }
+                    });
+                    window.dispatchEvent(userClickedEvent);
+                    console.log('🖱️ 📢 Event userClickedRack di-trigger dengan value:', shelfValue);
+                    
+                    // JANGAN trigger shelfLocationUpdated event karena ini akan memanggil initializeHighlight
+                    // yang akan me-reset highlight ke nilai lama
+                    // Hanya trigger change event biasa
+                    console.log('🖱️ 📢 Triggering change event (TANPA shelfLocationUpdated)');
                     inputField.dispatchEvent(new Event('change', { bubbles: true }));
+                    console.log('🖱️ ✅ Change event di-trigger');
+                    console.log('🖱️ selectedRackId SETELAH click:', selectedRackId);
+                    console.log('🖱️ inputField.value SETELAH click:', inputField.value);
+                    console.log('🖱️ ========================================');
+                } else {
+                    console.error('🖱️ ❌ Rack ID TIDAK DITEMUKAN dari attribute!');
                 }
+            } else {
+                console.warn('🖱️ ⚠️ Rack element TIDAK DITEMUKAN (bukan klik pada rak)');
             }
         });
+    } else {
+        console.error('❌ mapContainer TIDAK DITEMUKAN, event listener tidak bisa dipasang!');
     }
     
     // Fungsi untuk inisialisasi highlight berdasarkan nilai input
     function initializeHighlight() {
-        if (!inputField || !mapContainer) return;
+        console.log('🔄 ========================================');
+        console.log('🔄 === initializeHighlight DIPANGGIL ===');
+        console.log('🔄 ========================================');
+        console.log('🔄 Timestamp:', new Date().toISOString());
+        console.log('🔄 Stack trace:', new Error().stack);
+        
+        if (!inputField || !mapContainer) {
+            console.log('🔄 ❌ inputField atau mapContainer tidak ada, return');
+            return;
+        }
+        
+        console.log('🔄 selectedRackId saat ini:', selectedRackId);
+        console.log('🔄 inputField.value saat ini:', inputField.value);
         
         // Pastikan map container sudah terlihat (popup sudah terbuka)
         const modal = document.getElementById('shelf-map-modal');
         if (modal && modal.classList.contains('hidden')) {
+            console.log('🔄 ⏭️ Popup masih hidden, return');
             return; // Skip jika popup masih hidden
         }
         
         // Cek apakah ada rak di map
         const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
         if (allRacks.length === 0) {
+            console.log('🔄 ⏭️ Rak belum ter-render, return');
             return; // Skip jika rak belum ter-render
         }
         
+        console.log('🔄 Jumlah rak ditemukan:', allRacks.length);
+        
         if (inputField.value) {
             const currentValue = inputField.value.trim();
+            console.log('🔄 currentValue dari input:', currentValue);
+            
             // Ekstrak rak ID dari format "Rak A1" atau "A1"
             const match = currentValue.match(/Rak\s*([A-H][12])/i) || currentValue.match(/^([A-H][12])$/i);
             if (match && match[1]) {
                 const rackId = match[1].toUpperCase().trim();
+                console.log('🔄 rackId yang diekstrak:', rackId);
+                console.log('🔄 selectedRackId:', selectedRackId);
+                console.log('🔄 Apakah selectedRackId === rackId?', selectedRackId && selectedRackId.toUpperCase() === rackId);
+                
+                // Cek apakah selectedRackId sudah sesuai dengan rackId
+                // Jika ya, berarti user baru saja mengklik rak baru, jangan reset highlight
+                if (selectedRackId && selectedRackId.toUpperCase() === rackId) {
+                    console.log('🔄 ⚠️ selectedRackId sudah sesuai dengan rackId, cek apakah sudah ter-highlight');
+                    let alreadyHighlighted = false;
+                    allRacks.forEach(rack => {
+                        let currentRackId = rack.getAttribute('data-rack-id');
+                        if (currentRackId) {
+                            currentRackId = currentRackId.replace(/^["']+|["']+$/g, '').trim().toUpperCase();
+                        }
+                        if (currentRackId === rackId) {
+                            const computedBg = window.getComputedStyle(rack).backgroundColor;
+                            console.log('🔄 Computed bg untuk rak', currentRackId, ':', computedBg);
+                            // Cek apakah sudah ter-highlight (biru)
+                            if (computedBg.includes('rgb(37, 99, 235)') || computedBg.includes('rgb(37,99,235)')) {
+                                alreadyHighlighted = true;
+                                console.log('🔄 ✅ Rak', currentRackId, 'sudah ter-highlight');
+                            }
+                        }
+                    });
+                    
+                    // Jika sudah ter-highlight dengan benar, skip untuk menghindari reset
+                    if (alreadyHighlighted) {
+                        console.log('🔄 ✅ Rak sudah ter-highlight dengan benar, SKIP untuk menghindari reset');
+                        console.log('🔄 ========================================');
+                        return;
+                    } else {
+                        console.log('🔄 ⚠️ Rak belum ter-highlight, akan di-highlight');
+                    }
+                } else {
+                    console.log('🔄 ⚠️ selectedRackId tidak sesuai atau tidak ada');
+                    console.log('🔄 selectedRackId:', selectedRackId);
+                    console.log('🔄 rackId:', rackId);
+                }
                 
                 // Cek apakah rak sudah ter-highlight dengan benar
                 let alreadyHighlighted = false;
@@ -338,14 +508,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Jika sudah ter-highlight, skip untuk menghindari flicker
-                if (alreadyHighlighted && selectedRackId === rackId) {
+                if (alreadyHighlighted && selectedRackId && selectedRackId.toUpperCase() === rackId) {
+                    console.log('🔄 ✅ Rak sudah ter-highlight dan selectedRackId sesuai, SKIP');
+                    console.log('🔄 ========================================');
                     return;
                 }
                 
+                console.log('🔄 🎨 Memanggil updateHighlight dengan rackId:', rackId);
+                const oldSelectedRackId = selectedRackId;
                 selectedRackId = rackId;
+                console.log('🔄 selectedRackId di-update dari:', oldSelectedRackId, 'ke:', selectedRackId);
                 updateHighlight(rackId);
+                console.log('🔄 ✅ updateHighlight SELESAI dipanggil');
+            } else {
+                console.log('🔄 ⚠️ Tidak ada match untuk rackId dari value:', currentValue);
             }
         } else {
+            console.log('🔄 ⚠️ inputField.value kosong, reset semua highlight');
             // Jika tidak ada nilai, pastikan tidak ada yang ter-highlight
             allRacks.forEach(rack => {
                 rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
@@ -361,6 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 rack.style.removeProperty('box-shadow');
             });
         }
+        console.log('🔄 ========================================');
     }
 
     // Inisialisasi saat pertama kali load (skip jika map di dalam popup yang hidden)
@@ -373,9 +553,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen untuk event custom dari popup handler (untuk reset saat popup dibuka)
     if (mapContainer) {
         mapContainer.addEventListener('shelfLocationUpdated', function(e) {
+            console.log('📢 ========================================');
+            console.log('📢 === shelfLocationUpdated EVENT DITERIMA ===');
+            console.log('📢 ========================================');
+            console.log('📢 Timestamp:', new Date().toISOString());
+            console.log('📢 Event detail:', e.detail);
+            console.log('📢 selectedRackId saat ini:', selectedRackId);
+            console.log('📢 inputField.value saat ini:', inputField.value);
+            console.log('📢 Stack trace:', new Error().stack);
+            
             if (e.detail && e.detail.value) {
+                const oldValue = inputField.value;
                 // Update nilai input field
                 inputField.value = e.detail.value;
+                console.log('📢 Input field di-update dari:', oldValue, 'ke:', e.detail.value);
                 
                 // Pastikan format benar
                 let valueToUse = e.detail.value.trim();
@@ -384,16 +575,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (match) {
                         valueToUse = 'Rak ' + match[1];
                         inputField.value = valueToUse;
+                        console.log('📢 Format di-normalisasi ke:', valueToUse);
                     }
                 }
                 
+                // Ekstrak rackId dari value
+                const match = valueToUse.match(/Rak\s*([A-H][12])/i) || valueToUse.match(/^([A-H][12])$/i);
+                const rackIdFromEvent = match && match[1] ? match[1].toUpperCase().trim() : null;
+                console.log('📢 rackId dari event:', rackIdFromEvent);
+                console.log('📢 selectedRackId:', selectedRackId);
+                console.log('📢 Apakah rackIdFromEvent === selectedRackId?', rackIdFromEvent && selectedRackId && rackIdFromEvent === selectedRackId.toUpperCase());
+                
+                // Jika rackId dari event sama dengan selectedRackId, skip untuk menghindari reset
+                if (rackIdFromEvent && selectedRackId && rackIdFromEvent === selectedRackId.toUpperCase()) {
+                    console.log('📢 ⚠️ rackId dari event sama dengan selectedRackId, SKIP initializeHighlight untuk menghindari reset');
+                    console.log('📢 ========================================');
+                    return;
+                }
+                
                 // Gunakan multiple delays untuk memastikan map sudah ter-render
+                console.log('📢 📅 Memanggil initializeHighlight dengan delays: 50, 150, 300, 500ms');
                 [50, 150, 300, 500].forEach(delay => {
                     setTimeout(function() {
+                        console.log('📢 📅 initializeHighlight dipanggil dengan delay', delay, 'ms');
                         initializeHighlight();
                     }, delay);
                 });
             } else {
+                console.log('📢 ⚠️ Event detail tidak ada atau value kosong, reset highlight');
                 // Jika tidak ada nilai, reset highlight
                 const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
                 allRacks.forEach(rack => {
@@ -408,6 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     rack.style.removeProperty('box-shadow');
                 });
             }
+            console.log('📢 ========================================');
         });
     }
 
@@ -435,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // Juga listen untuk event custom 'popupOpened' dari parent
+    // Juga listen untuk event custom 'popupOpened' dari parent dengan delay untuk padding responsif
     window.addEventListener('shelfMapPopupOpened', function() {
         // Pastikan nilai input field sudah benar
         if (inputField && inputField.value) {
@@ -449,8 +659,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Gunakan multiple attempts untuk memastikan highlight berjalan
-        [50, 150, 300, 500, 700, 1000].forEach(delay => {
+        // Gunakan multiple attempts dengan delay lebih lama untuk memastikan padding responsif ter-apply
+        [100, 200, 350, 500, 700, 1000, 1500].forEach(delay => {
             setTimeout(function() {
                 initializeHighlight();
             }, delay);

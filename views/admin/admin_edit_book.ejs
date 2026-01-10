@@ -9,11 +9,11 @@
     action="/admin/books/edit/<%= book.id %>" 
     method="POST" 
     enctype="multipart/form-data"
-    class="bg-white p-6 rounded-lg shadow space-y-6"
+    class="bg-white p-4 sm:p-6 rounded-lg shadow space-y-4 sm:space-y-6"
 >
 
 <!-- ================= INFORMASI DASAR ================= -->
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
     <div class="space-y-4">
         <div>
             <label class="font-medium">Judul</label>
@@ -66,7 +66,7 @@
 </div>
 
 <!-- ================= AUTHOR & PUBLISHER ================= -->
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
     <div>
         <label class="font-medium">Penulis</label>
         <select name="authors[]" id="author-select" class="w-full p-2 border rounded" multiple>
@@ -91,7 +91,7 @@
 </div>
 
 <!-- ================= KATEGORI & SUBJEK ================= -->
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
     <div>
         <label class="font-medium">Kategori</label>
         <select name="category_id" id="category-select" class="w-full p-2 border rounded">
@@ -116,17 +116,17 @@
 </div>
 
 <!-- ================= INFORMASI LAIN ================= -->
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
     <div>
         <label class="font-medium">Bahasa</label>
         <input type="text" name="language" value="<%= book.language %>" class="w-full p-2 border rounded">
     </div>
-</div>
+    </div>
 
 <!-- LOKASI RAK (POPUP MAP) -->
-<div>
+    <div>
     <label class="font-medium mb-2 block">Lokasi Rak</label>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <!-- Hidden input untuk menyimpan nilai shelf_location -->
         <input type="hidden" name="shelf_location" id="shelf_location" value="<%= book.shelf_location || '' %>">
         <!-- Display nilai yang dipilih -->
@@ -140,7 +140,7 @@
         <button 
             type="button" 
             id="open-shelf-map-btn"
-            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+            class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
             <i class="fas fa-map-marked-alt mr-2"></i>Tambah Lokasi
         </button>
@@ -148,48 +148,48 @@
 </div>
 
 <!-- POPUP/MODAL MAP RAK -->
-<div id="shelf-map-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+<div id="shelf-map-modal" class="fixed inset-0 z-[100] hidden">
+    <!-- Overlay background hitam dengan animasi fade -->
+    <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity duration-300 ease-out"></div>
+    <!-- Container untuk konten modal -->
+    <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4 md:p-6 pointer-events-none">
+        <div id="shelf-map-modal-content" class="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-5xl w-full mx-auto max-h-[90vh] sm:max-h-[85vh] overflow-hidden pointer-events-auto flex flex-col transform scale-95 opacity-0 transition-all duration-300 ease-out">
         <!-- Header Modal -->
-        <div class="bg-gray-100 px-6 py-4 border-b flex justify-between items-center">
-            <h3 class="font-bold text-gray-700 flex items-center">
-                <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i> Pilih Lokasi Rak
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 md:px-8 py-3 sm:py-4 border-b border-gray-200 flex-shrink-0">
+            <h3 class="font-bold text-gray-800 text-base sm:text-lg flex items-center justify-center sm:justify-start">
+                <i class="fas fa-map-marked-alt text-blue-600 mr-2 text-lg sm:text-xl"></i> 
+                <span>Pilih Lokasi Rak</span>
             </h3>
-            <button 
-                type="button" 
-                id="close-shelf-map-modal"
-                class="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-            >
-                &times;
-            </button>
         </div>
         <!-- Body Modal (Map) -->
-        <div class="p-6">
-            <p class="text-sm text-gray-600 mb-4">
+        <div class="p-4 sm:p-5 md:p-6 flex-1 overflow-y-auto sm:overflow-y-visible min-h-0">
+            <p class="text-xs sm:text-sm text-gray-600 mb-4 text-center sm:text-left">
+                <i class="fas fa-info-circle text-blue-500 mr-1"></i>
                 Klik pada rak di denah di bawah ini untuk memilih lokasi rak buku.
             </p>
             <!-- Include map interaktif di dalam popup -->
-            <div id="shelf-map-popup-container">
+            <div id="shelf-map-popup-container" class="flex justify-center">
                 <%- include('partials/shelfMapInteractive', { inputFieldId: 'shelf_location', isPopup: true }) %>
             </div>
         </div>
         <!-- Footer Modal -->
-        <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 md:px-8 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-center sm:justify-end gap-3 flex-shrink-0">
             <button 
                 type="button" 
                 id="cancel-shelf-map-btn"
-                class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+                class="w-full sm:w-auto px-5 sm:px-6 py-2.5 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 hover:border-gray-400 active:scale-95 transition-all duration-200 ease-in-out shadow-sm hover:shadow-md"
             >
-                Batal
+                <i class="fas fa-times mr-2"></i>Batal
             </button>
             <button 
                 type="button" 
                 id="confirm-shelf-map-btn"
-                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                class="w-full sm:w-auto px-5 sm:px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 active:scale-95 transition-all duration-200 ease-in-out shadow-md hover:shadow-lg"
             >
-                Simpan
+                <i class="fas fa-check mr-2"></i>Simpan
             </button>
         </div>
+    </div>
     </div>
 </div>
 
@@ -213,14 +213,16 @@
 <div>
     <label class="font-medium">Cover Buku</label>
 
+    <div id="cover-wrapper" class="mt-2 space-y-2">
+        <!-- Existing cover (jika ada) -->
     <% if (book.image) { %>
-        <div id="existing-cover" class="flex items-center gap-3 mt-2">
+            <div id="existing-cover" class="flex items-center gap-3">
             <span class="px-3 py-1 bg-gray-200 rounded text-sm">
                 <%= book.image %>
             </span>
             <button 
                 type="button" 
-                id="remove-cover"
+                    id="remove-existing-cover"
                 class="text-red-600 font-bold hover:text-red-800"
                 title="Hapus / ganti cover"
             >
@@ -233,19 +235,41 @@
             name="image" 
             id="cover-input"
             accept="image/*" 
-            class="w-full p-2 border rounded mt-2 hidden"
+                class="w-full p-2 border rounded hidden"
         >
     <% } else { %>
         <input 
             type="file" 
             name="image" 
+                id="cover-input"
             accept="image/*" 
-            class="w-full p-2 border rounded mt-2"
+                class="w-full p-2 border rounded"
+            >
+        <% } %>
+
+        <!-- Preview untuk gambar baru yang di-upload -->
+        <div 
+            id="cover-preview" 
+            class="hidden flex items-center gap-3"
         >
-    <% } %>
+            <span 
+                id="cover-filename"
+                class="px-3 py-1 bg-gray-200 rounded text-sm"
+            ></span>
+
+            <button 
+                type="button" 
+                id="remove-new-cover"
+                class="text-red-600 font-bold hover:text-red-800"
+                title="Hapus gambar baru"
+            >
+                ✖
+            </button>
+        </div>
+    </div>
 </div>
 
-<button class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
+<button class="w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition-colors">
     Update Buku
 </button>
 
@@ -269,15 +293,62 @@
     initTomSelect("#subject-select", "Cari atau tambah subjek...");
     initTomSelect("#category-select", "Cari atau tambah kategori...");
 
-    const removeCoverBtn = document.getElementById('remove-cover');
+    const removeExistingCoverBtn = document.getElementById('remove-existing-cover');
     const existingCover = document.getElementById('existing-cover');
     const coverInput = document.getElementById('cover-input');
+    const coverPreview = document.getElementById('cover-preview');
+    const coverFilename = document.getElementById('cover-filename');
+    const removeNewCoverBtn = document.getElementById('remove-new-cover');
 
-    if (removeCoverBtn) {
-        removeCoverBtn.addEventListener('click', () => {
-            existingCover.remove();          // hapus nama file
+    // Handler untuk menghapus cover yang sudah ada
+    if (removeExistingCoverBtn) {
+        removeExistingCoverBtn.addEventListener('click', () => {
+            if (existingCover) {
+                existingCover.remove();          // hapus nama file existing
+            }
+            if (coverInput) {
             coverInput.classList.remove('hidden'); // munculkan input file
             coverInput.value = "";           // reset input
+            }
+        });
+    }
+
+    // Handler untuk preview gambar baru yang di-upload
+    if (coverInput) {
+        coverInput.addEventListener('change', () => {
+            if (!coverInput.files.length) return;
+
+            // Sembunyikan existing cover jika ada
+            if (existingCover) {
+                existingCover.classList.add('hidden');
+            }
+
+            // Tampilkan preview dengan nama file
+            if (coverFilename) {
+                coverFilename.textContent = coverInput.files[0].name;
+            }
+            coverInput.classList.add('hidden');     // sembunyikan input
+            if (coverPreview) {
+                coverPreview.classList.remove('hidden'); // tampilkan preview
+            }
+        });
+    }
+
+    // Handler untuk menghapus preview gambar baru
+    if (removeNewCoverBtn) {
+        removeNewCoverBtn.addEventListener('click', () => {
+            if (coverInput) {
+                coverInput.value = "";                  // hapus file
+                coverInput.classList.remove('hidden');  // munculkan input
+            }
+            if (coverPreview) {
+                coverPreview.classList.add('hidden');   // sembunyikan preview
+            }
+            
+            // Tampilkan kembali existing cover jika ada
+            if (existingCover && existingCover.parentNode) {
+                existingCover.classList.remove('hidden');
+            }
         });
     }
 
@@ -285,7 +356,6 @@
     console.log('=== SETUP POPUP MAP RAK ===');
     const shelfMapModal = document.getElementById('shelf-map-modal');
     const openShelfMapBtn = document.getElementById('open-shelf-map-btn');
-    const closeShelfMapModal = document.getElementById('close-shelf-map-modal');
     const cancelShelfMapBtn = document.getElementById('cancel-shelf-map-btn');
     const confirmShelfMapBtn = document.getElementById('confirm-shelf-map-btn');
     const shelfLocationInput = document.getElementById('shelf_location');
@@ -299,6 +369,25 @@
 
     // Variabel untuk menyimpan nilai sementara saat di popup
     let tempShelfLocation = '';
+    // Flag untuk menandai apakah user sudah mengklik rak baru
+    let userHasClickedNewRack = false;
+    
+    // Listen untuk event ketika user mengklik rak baru di map
+    // Ini akan update tempShelfLocation agar tryHighlight tidak me-reset highlight ke nilai lama
+    window.addEventListener('userClickedRack', function(e) {
+        if (e.detail && e.detail.value) {
+            const oldTempValue = tempShelfLocation;
+            tempShelfLocation = e.detail.value;
+            userHasClickedNewRack = true;
+            console.log('🔄 ========================================');
+            console.log('🔄 === userClickedRack EVENT DITERIMA ===');
+            console.log('🔄 ========================================');
+            console.log('🔄 tempShelfLocation di-update dari:', oldTempValue, 'ke:', tempShelfLocation);
+            console.log('🔄 userHasClickedNewRack di-set ke: true');
+            console.log('🔄 Ini mencegah tryHighlight me-reset highlight ke nilai lama');
+            console.log('🔄 ========================================');
+        }
+    });
 
     // Fungsi untuk update display lokasi rak
     function updateShelfLocationDisplay(value) {
@@ -437,7 +526,10 @@
             
             // Simpan nilai saat ini sebagai nilai sementara
             tempShelfLocation = shelfLocationInput.value || '';
+            userHasClickedNewRack = false; // Reset flag saat popup dibuka
+            console.log('=== TOMBOL TAMBAH LOKASI DIKLIK ===');
             console.log('Nilai awal dari input:', tempShelfLocation);
+            console.log('userHasClickedNewRack di-reset ke: false');
             
             // Pastikan format nilai benar (jika hanya "C1", tambahkan "Rak ")
             if (tempShelfLocation && !tempShelfLocation.match(/^Rak\s+/i)) {
@@ -454,81 +546,129 @@
             document.body.style.overflow = 'hidden';
             console.log('Modal dibuka');
             
-            // Gunakan requestAnimationFrame untuk memastikan DOM sudah ter-update
+            // Animasi fade-in dan scale-up
+            const modalContent = document.getElementById('shelf-map-modal-content');
+            if (modalContent) {
+                // Reset transform untuk animasi
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+            
+            // Tunggu sampai modal benar-benar ter-render dengan padding baru
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    console.log('=== REQUESTANIMATIONFRAME DIPANGGIL ===');
-                    const mapContainer = document.getElementById('shelf-map-container');
-                    console.log('Map container:', mapContainer);
-                    
-                    if (!mapContainer) {
-                        console.error('Map container TIDAK DITEMUKAN!');
-                        return;
-                    }
-                    
-                    // Fungsi untuk mencoba highlight dengan multiple attempts
-                    const tryHighlight = () => {
-                        console.log('tryHighlight dipanggil, tempShelfLocation:', tempShelfLocation);
-                        if (tempShelfLocation) {
-                            const success = highlightRackDirectly(tempShelfLocation);
-                            console.log('Hasil highlightRackDirectly:', success);
-                            if (success) {
-                                // Juga trigger event untuk update input field
-                                if (shelfLocationInput.value !== tempShelfLocation) {
-                                    shelfLocationInput.value = tempShelfLocation;
-                                }
-                                const updateEvent = new CustomEvent('shelfLocationUpdated', { 
-                                    detail: { value: tempShelfLocation } 
-                                });
-                                mapContainer.dispatchEvent(updateEvent);
-                            }
-                            return success;
+                    // Tunggu lagi untuk memastikan padding responsif sudah ter-apply
+                    setTimeout(() => {
+                        console.log('=== REQUESTANIMATIONFRAME DIPANGGIL ===');
+                        const mapContainer = document.getElementById('shelf-map-container');
+                        console.log('Map container:', mapContainer);
+                        
+                        if (!mapContainer) {
+                            console.error('Map container TIDAK DITEMUKAN!');
+                            return;
                         }
-                        return false;
-                    };
-                    
-                    // Cek apakah rak sudah ada
-                    const racks = mapContainer.querySelectorAll('[data-rack-id]');
-                    console.log('Jumlah rak saat ini:', racks.length);
-                    
-                    // Coba langsung
-                    if (!tryHighlight()) {
-                        console.log('Highlight pertama gagal, menggunakan MutationObserver');
-                        // Jika belum berhasil, gunakan MutationObserver
-                        const observer = new MutationObserver((mutations, obs) => {
-                            const racks = mapContainer.querySelectorAll('[data-rack-id]');
-                            console.log('MutationObserver: Jumlah rak sekarang:', racks.length);
-                            if (racks.length > 0) {
-                                if (tryHighlight()) {
-                                    console.log('Highlight berhasil via MutationObserver');
-                                    obs.disconnect();
-                                }
+                        
+                        // Fungsi untuk mencoba highlight dengan multiple attempts
+                        const tryHighlight = () => {
+                            // Cek apakah user sudah mengklik rak baru
+                            const currentInputValue = shelfLocationInput.value || '';
+                            console.log('🔍 ========================================');
+                            console.log('🔍 === tryHighlight DIPANGGIL ===');
+                            console.log('🔍 ========================================');
+                            console.log('🔍 tempShelfLocation (nilai awal saat popup dibuka):', tempShelfLocation);
+                            console.log('🔍 currentInputValue (nilai saat ini di input field):', currentInputValue);
+                            console.log('🔍 userHasClickedNewRack:', userHasClickedNewRack);
+                            
+                            // Jika user sudah mengklik rak baru, JANGAN reset highlight ke nilai lama
+                            if (userHasClickedNewRack) {
+                                console.log('🔍 ⚠️ ⚠️ ⚠️ userHasClickedNewRack = true');
+                                console.log('🔍 ⚠️ User sudah mengklik rak baru, SKIP highlightRackDirectly');
+                                console.log('🔍 ⚠️ Ini mencegah reset highlight ke nilai lama');
+                                console.log('🔍 ========================================');
+                                return false; // Return false untuk tidak trigger event dan tidak highlight
                             }
-                        });
+                            
+                            // Jika input field sudah berubah dari tempShelfLocation, berarti user sudah klik rak baru
+                            // Jangan reset highlight ke nilai lama - SKIP SEMUA LOGIKA HIGHLIGHT
+                            if (currentInputValue && currentInputValue.trim() !== '' && currentInputValue !== tempShelfLocation) {
+                                console.log('🔍 ⚠️ ⚠️ ⚠️ Input field sudah berubah dari nilai awal!');
+                                console.log('🔍 ⚠️ Ini berarti user sudah mengklik rak baru');
+                                console.log('🔍 ⚠️ SKIP highlightRackDirectly untuk menghindari reset ke nilai lama');
+                                console.log('🔍 ========================================');
+                                // Return false untuk tidak trigger event dan tidak highlight
+                                return false;
+                            }
+                            
+                            // Hanya highlight jika tempShelfLocation masih sama dengan input field
+                            // Ini berarti user belum mengklik rak baru, jadi kita highlight nilai awal
+                            if (tempShelfLocation && currentInputValue === tempShelfLocation) {
+                                console.log('🔍 ✅ Nilai masih sama dengan nilai awal, akan highlight dengan tempShelfLocation:', tempShelfLocation);
+                                const success = highlightRackDirectly(tempShelfLocation);
+                                console.log('🔍 Hasil highlightRackDirectly:', success);
+                                if (success) {
+                                    // Juga trigger event untuk update input field
+                                    if (shelfLocationInput.value !== tempShelfLocation) {
+                                        shelfLocationInput.value = tempShelfLocation;
+                                    }
+                                    const updateEvent = new CustomEvent('shelfLocationUpdated', { 
+                                        detail: { value: tempShelfLocation } 
+                                    });
+                                    mapContainer.dispatchEvent(updateEvent);
+                                }
+                                console.log('🔍 ========================================');
+                                return success;
+                            }
+                            
+                            console.log('🔍 ⏭️ Tidak ada nilai untuk highlight atau nilai sudah berubah');
+                            console.log('🔍 ========================================');
+                            return false;
+                        };
                         
-                        observer.observe(mapContainer, {
-                            childList: true,
-                            subtree: true
-                        });
+                        // Cek apakah rak sudah ada
+                        const racks = mapContainer.querySelectorAll('[data-rack-id]');
+                        console.log('Jumlah rak saat ini:', racks.length);
                         
-                        // Timeout fallback
-                        setTimeout(() => {
-                            console.log('MutationObserver timeout, mencoba highlight sekali lagi');
-                            observer.disconnect();
-                            tryHighlight();
-                        }, 2000);
-                    } else {
-                        console.log('Highlight pertama berhasil!');
-                    }
-                    
-                    // Multiple attempts sebagai backup
-                    console.log('Setup multiple attempts dengan delay');
-                    [50, 100, 200, 300, 500, 700, 1000, 1500].forEach(delay => {
-                        setTimeout(() => {
-                            console.log(`Attempt dengan delay ${delay}ms`);
-                            tryHighlight();
-                        }, delay);
-                    });
+                        // Coba langsung
+                        if (!tryHighlight()) {
+                            console.log('Highlight pertama gagal, menggunakan MutationObserver');
+                            // Jika belum berhasil, gunakan MutationObserver
+                            const observer = new MutationObserver((mutations, obs) => {
+                                const racks = mapContainer.querySelectorAll('[data-rack-id]');
+                                console.log('MutationObserver: Jumlah rak sekarang:', racks.length);
+                                if (racks.length > 0) {
+                                    if (tryHighlight()) {
+                                        console.log('Highlight berhasil via MutationObserver');
+                                        obs.disconnect();
+                                    }
+                                }
+                            });
+                            
+                            observer.observe(mapContainer, {
+                                childList: true,
+                                subtree: true
+                            });
+                            
+                            // Timeout fallback
+                            setTimeout(() => {
+                                console.log('MutationObserver timeout, mencoba highlight sekali lagi');
+                                observer.disconnect();
+                                tryHighlight();
+                            }, 2000);
+                        } else {
+                            console.log('Highlight pertama berhasil!');
+                        }
+                        
+                        // Multiple attempts sebagai backup dengan delay lebih lama
+                        console.log('Setup multiple attempts dengan delay');
+                        [100, 200, 300, 500, 700, 1000, 1500, 2000].forEach(delay => {
+                            setTimeout(() => {
+                                console.log(`Attempt dengan delay ${delay}ms`);
+                                tryHighlight();
+                            }, delay);
+                        });
+                    }, 100); // Delay tambahan untuk memastikan padding ter-apply
                 });
             });
         });
@@ -539,30 +679,33 @@
 
     // Fungsi untuk tutup popup
     function closeShelfMapPopup(resetValue = false) {
-        if (resetValue && shelfLocationInput.value !== tempShelfLocation) {
-            // Reset ke nilai awal jika dibatalkan
-            shelfLocationInput.value = tempShelfLocation;
-            // Trigger update di map untuk re-highlight
-            setTimeout(() => {
-                const mapContainer = document.getElementById('shelf-map-container');
-                if (mapContainer) {
-                    const event = new CustomEvent('shelfLocationUpdated', { 
-                        detail: { value: tempShelfLocation || '' } 
-                    });
-                    mapContainer.dispatchEvent(event);
-                }
-            }, 50);
+        const modalContent = document.getElementById('shelf-map-modal-content');
+        if (modalContent) {
+            // Animasi fade-out dan scale-down
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
         }
-        shelfMapModal.classList.add('hidden');
-        shelfMapModal.classList.remove('flex');
-        document.body.style.overflow = ''; // Restore body scroll
-    }
-
-    // Tutup popup (X button)
-    if (closeShelfMapModal) {
-        closeShelfMapModal.addEventListener('click', () => {
-            closeShelfMapPopup(true); // Reset nilai
-        });
+        
+        // Tunggu animasi selesai sebelum hide modal
+        setTimeout(() => {
+            if (resetValue && shelfLocationInput.value !== tempShelfLocation) {
+                // Reset ke nilai awal jika dibatalkan
+                shelfLocationInput.value = tempShelfLocation;
+                // Trigger update di map untuk re-highlight
+                setTimeout(() => {
+                    const mapContainer = document.getElementById('shelf-map-container');
+                    if (mapContainer) {
+                        const event = new CustomEvent('shelfLocationUpdated', { 
+                            detail: { value: tempShelfLocation || '' } 
+                        });
+                        mapContainer.dispatchEvent(event);
+                    }
+                }, 50);
+            }
+            shelfMapModal.classList.add('hidden');
+            shelfMapModal.classList.remove('flex');
+            document.body.style.overflow = ''; // Restore body scroll
+        }, 300); // Sesuaikan dengan duration animasi (300ms)
     }
 
     // Batal button

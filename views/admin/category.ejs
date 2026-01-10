@@ -3,36 +3,37 @@
 <h1 class="text-2xl font-bold mb-6">Daftar Kategori</h1>
 
 <!-- SEARCH -->
-<form action="/admin/categories" method="GET" class="mb-6 flex items-center gap-2">
+<form action="/admin/categories" method="GET" class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
     <input 
         type="text" 
         name="q" 
         value="<%= typeof q !== 'undefined' ? q : '' %>" 
         placeholder="Cari kategori..." 
-        class="border p-2 rounded w-full"
+        class="border p-2 rounded flex-1"
     >
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 whitespace-nowrap">
         Cari
     </button>
 </form>
 
-<div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl font-bold">Daftar Kategori</h1>
+<div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
+    <h1 class="text-xl sm:text-2xl font-bold">Daftar Kategori</h1>
 
     <button 
         onclick="openAddModal()"
-        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        class="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 whitespace-nowrap">
         ➕ Tambah Kategori
     </button>
 </div>
 
 <!-- TABEL -->
+<div class="overflow-x-auto">
 <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
     <thead class="bg-gray-100 text-left">
         <tr>
-            <th class="p-4">No</th>
-            <th class="p-4">Nama Kategori</th>
-            <th class="p-4">Aksi</th>
+            <th class="p-2 sm:p-4">No</th>
+            <th class="p-2 sm:p-4">Nama Kategori</th>
+            <th class="p-2 sm:p-4">Aksi</th>
         </tr>
     </thead>
 
@@ -46,9 +47,9 @@
         <% } else { %>
             <% categories.forEach((category, index) => { %>
                 <tr class="border-t hover:bg-gray-50">
-                    <td class="p-4"><%= index + 1 %></td>
-                    <td class="p-4"><%= category.name %></td>
-                    <td class="p-4">
+                    <td class="p-2 sm:p-4 text-sm sm:text-base"><%= index + 1 %></td>
+                    <td class="p-2 sm:p-4 text-sm sm:text-base"><%= category.name %></td>
+                    <td class="p-2 sm:p-4 text-sm sm:text-base">
                         <button
                             onclick="openEditModal('<%= category.id %>', '<%= category.name %>')"
                             class="text-blue-600 hover:underline">
@@ -68,10 +69,11 @@
         <% } %>
     </tbody>
 </table>
+</div>
 
 <!-- MODAL ADD -->
-<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg w-full max-w-md p-6">
+<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-md p-4 sm:p-6">
         <h2 class="text-lg font-bold mb-4">Tambah Kategori</h2>
 
         <form action="/admin/categories/add" method="POST">
@@ -82,11 +84,11 @@
                 placeholder="Nama kategori"
                 class="w-full border p-2 rounded mb-4">
 
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeAddModal()" class="px-4 py-2 border rounded">
+            <div class="flex flex-col sm:flex-row justify-end gap-2">
+                <button type="button" onclick="closeAddModal()" class="w-full sm:w-auto px-4 py-2 border rounded transition-colors">
                     Batal
                 </button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">
+                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded transition-colors">
                     Simpan
                 </button>
             </div>
@@ -95,8 +97,8 @@
 </div>
 
 <!-- MODAL EDIT -->
-<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg w-full max-w-md p-6">
+<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-md p-4 sm:p-6">
         <h2 class="text-lg font-bold mb-4">Edit Kategori</h2>
 
         <form id="editForm" method="POST">
@@ -107,11 +109,11 @@
                 required
                 class="w-full border p-2 rounded mb-4">
 
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeEditModal()" class="px-4 py-2 border rounded">
+            <div class="flex flex-col sm:flex-row justify-end gap-2">
+                <button type="button" onclick="closeEditModal()" class="w-full sm:w-auto px-4 py-2 border rounded transition-colors">
                     Batal
                 </button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">
+                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded transition-colors">
                     Update
                 </button>
             </div>

@@ -51,7 +51,7 @@
 
 </div>
 
-<div class="mb-4 flex flex-wrap gap-2">
+<div class="mb-4 flex flex-wrap gap-2 justify-start">
     <a href="/admin/books/export" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700">
         📊 Export Data
     </a>
@@ -72,9 +72,9 @@
     </button>
 </div>
 
-<div id="bulkActions" class="hidden mb-4 p-4 bg-red-600 text-white rounded-lg flex justify-between items-center shadow-lg">
-    <span id="selectedCount" class="font-bold">0 buku dipilih</span>
-    <button onclick="openDeleteModal()" class="bg-white text-red-600 px-4 py-2 rounded-md font-bold hover:bg-gray-100 transition">
+<div id="bulkActions" class="hidden mb-4 p-4 bg-red-600 text-white rounded-lg flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 shadow-lg">
+    <span id="selectedCount" class="font-bold text-sm sm:text-base">0 buku dipilih</span>
+    <button onclick="openDeleteModal()" class="bg-white text-red-600 px-4 py-2 rounded-md font-bold hover:bg-gray-100 transition whitespace-nowrap text-sm sm:text-base">
         🗑️ Hapus Sekarang
     </button>
 </div>
@@ -83,7 +83,7 @@
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
 
-        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full p-6 relative">
+        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all w-full max-w-lg mx-auto p-4 sm:p-6 relative">
             <h3 class="text-lg font-bold mb-4">Import Buku via Excel</h3>
             
             <form action="/admin/books/import" method="POST" enctype="multipart/form-data" id="importForm">
@@ -102,30 +102,31 @@
     </div>
 </div>
 
-<form action="/admin/books" method="GET" class="mb-6 flex items-center gap-2">
+<form action="/admin/books" method="GET" class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
     <input 
         type="text" 
         name="q" 
         value="<%= typeof q !== 'undefined' ? q : '' %>" 
         placeholder="Cari buku..." 
-        class="border p-2 rounded w-full"
+        class="border p-2 rounded flex-1"
     >
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 whitespace-nowrap">
         Cari
     </button>
 </form>
 
+<div class="overflow-x-auto">
 <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
     <thead class="bg-gray-100 text-left">
         <tr>
-            <th class="p-4">
+            <th class="p-2 sm:p-4">
                 <span class="no-label">No</span>
             </th>
-            <th class="p-4">Gambar</th>
-            <th class="p-4">Judul</th>
-            <th class="p-4">Pengarang</th>
-            <th class="p-4">Kategori</th>
-            <th class="p-4">Aksi</th>
+            <th class="p-2 sm:p-4 hidden sm:table-cell">Gambar</th>
+            <th class="p-2 sm:p-4">Judul</th>
+            <th class="p-2 sm:p-4 hidden md:table-cell">Pengarang</th>
+            <th class="p-2 sm:p-4 hidden lg:table-cell">Kategori</th>
+            <th class="p-2 sm:p-4">Aksi</th>
         </tr>
     </thead>
     <tbody>
@@ -134,33 +135,54 @@
         <% } else { %>
             <% books.forEach((book, index) => { %>
             <tr class="border-t hover:bg-gray-50">
-                <td class="p-4 flex items-center gap-2">
+                <td class="p-2 sm:p-4 flex items-center gap-2">
                     <input type="checkbox" name="bookIds" value="<%= book.id %>" class="delete-checkbox hidden cursor-pointer" onchange="updateBulkPanel()">
-                    <span><%= (currentPage - 1) * limit + index + 1 %></span>
+                    <span class="text-sm sm:text-base"><%= (currentPage - 1) * limit + index + 1 %></span>
                 </td>
-                <td class="p-4">
-                    <div class="w-16 h-24 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                <td class="p-2 sm:p-4 hidden sm:table-cell">
+                    <div class="w-12 h-16 sm:w-16 sm:h-24 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
                         <% if (book.image) { %><img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
                         <% } else { %><div class="text-center text-gray-400 p-1"><p style="font-size: 0.5rem;" class="font-serif leading-tight font-bold text-center">SAMPUL<br>BELUM<br>TERSEDIA</p></div><% } %>
                     </div>
                 </td>
-                <td class="p-4 font-medium"><%= book.title %></td>
-                <td class="p-4 text-sm text-gray-600"><%= book.Authors.map(a => a.name).join(', ') || '-' %></td>
-                <td class="p-4 text-sm"><%= book.Category ? book.Category.name : '-' %></td>
-                <td class="p-4 text-sm">
-                    <a href="/admin/books/edit/<%= book.id %>" class="text-blue-600 hover:underline">Edit</a> |
-                    <a href="/admin/books/delete/<%= book.id %>" onclick="return confirm('Yakin hapus buku ini?')" class="text-red-600 hover:underline">Hapus</a>
+                <td class="p-2 sm:p-4 font-medium text-sm sm:text-base">
+                    <div class="sm:hidden mb-2">
+                        <div class="w-16 h-20 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden mb-2">
+                            <% if (book.image) { %>
+                                <img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
+                            <% } else { %>
+                                <div class="text-center text-gray-400 p-1">
+                                    <p style="font-size: 0.5rem;" class="font-serif leading-tight font-bold text-center">SAMPUL<br>BELUM<br>TERSEDIA</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="font-semibold mb-1"><%= book.title %></div>
+                    <div class="text-xs text-gray-600 sm:hidden">
+                        <div><strong>Pengarang:</strong> <%= book.Authors.map(a => a.name).join(', ') || '-' %></div>
+                        <div><strong>Kategori:</strong> <%= book.Category ? book.Category.name : '-' %></div>
+                    </div>
+                </td>
+                <td class="p-2 sm:p-4 text-sm text-gray-600 hidden md:table-cell"><%= book.Authors.map(a => a.name).join(', ') || '-' %></td>
+                <td class="p-2 sm:p-4 text-sm hidden lg:table-cell"><%= book.Category ? book.Category.name : '-' %></td>
+                <td class="p-2 sm:p-4 text-sm">
+                    <div class="flex flex-col sm:flex-row gap-1 sm:gap-0">
+                        <a href="/admin/books/edit/<%= book.id %>" class="text-blue-600 hover:underline text-xs sm:text-sm">Edit</a>
+                        <span class="hidden sm:inline">|</span>
+                        <a href="/admin/books/delete/<%= book.id %>" onclick="return confirm('Yakin hapus buku ini?')" class="text-red-600 hover:underline text-xs sm:text-sm">Hapus</a>
+                    </div>
                 </td>
             </tr>
             <% }) %>
         <% } %>
     </tbody>
 </table>
+</div>
 
 <div id="deleteModal" class="fixed inset-0 z-[80] hidden overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen px-4 text-center">
         <div class="fixed inset-0 bg-black opacity-60" onclick="toggleModal('deleteModal')"></div>
-        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg sm:w-full p-6 relative">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-lg mx-auto p-4 sm:p-6 relative">
             <div class="text-center">
                 <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
                 <h3 id="deleteModalTitle" class="text-xl font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
