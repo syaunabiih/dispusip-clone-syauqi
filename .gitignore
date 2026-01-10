@@ -8,3 +8,5 @@ pids*.pid*.seed*.pid.lock
 .idea.vscode*.suo.ntvs*.njsproj*.sln*.sw?
 
 .DS_StoreThumbs.db
+
+public/image/uploads/
