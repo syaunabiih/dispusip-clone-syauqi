@@ -295,6 +295,12 @@
     const shelfLocationText = document.getElementById('shelf-location-text');
     const shelfLocationDisplay = document.getElementById('shelf-location-display');
 
+    // Debug: Cek apakah elemen ditemukan
+    console.log('=== DEBUG POPUP MAP ===');
+    console.log('shelfMapModal:', shelfMapModal);
+    console.log('openShelfMapBtn:', openShelfMapBtn);
+    console.log('shelfLocationInput:', shelfLocationInput);
+
     // Variabel untuk menyimpan nilai sementara saat di popup
     let tempShelfLocation = '';
 
@@ -313,7 +319,9 @@
 
     // Buka popup
     if (openShelfMapBtn) {
+        console.log('✅ Event listener dipasang pada openShelfMapBtn');
         openShelfMapBtn.addEventListener('click', () => {
+            console.log('🖱️ Tombol Tambah Lokasi diklik!');
             // Simpan nilai saat ini sebagai nilai sementara
             tempShelfLocation = shelfLocationInput.value || '';
             
@@ -329,6 +337,22 @@
             shelfMapModal.classList.remove('hidden');
             shelfMapModal.classList.add('flex');
             document.body.style.overflow = 'hidden';
+            
+            // Animasi fade-in dan scale-up
+            const modalContent = document.getElementById('shelf-map-modal-content');
+            console.log('📦 modalContent:', modalContent);
+            if (modalContent) {
+                // Reset transform untuk animasi
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalContent.classList.add('scale-100', 'opacity-100');
+                    console.log('✅ Animasi modal diaktifkan');
+                }, 10);
+            } else {
+                console.error('❌ modalContent tidak ditemukan!');
+            }
+            
+            console.log('📊 Modal classes setelah dibuka:', shelfMapModal.className);
             
             // Tunggu sampai modal benar-benar ter-render dengan padding baru
             requestAnimationFrame(() => {
