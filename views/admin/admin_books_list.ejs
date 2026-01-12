@@ -1,452 +1,587 @@
-<%- include('partials/header', { title: 'Daftar Buku', active: 'home' }) %>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<h1 class="text-2xl font-bold mb-6">📚 Daftar Buku</h1>
+    <%- include('partials/header', { title: 'Daftar Buku', active: 'home' }) %>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <h1 class="text-2xl font-bold mb-6">📚 Daftar Buku</h1>
 
 
-<% if (typeof query !== 'undefined' && query.importSuccess) { %>
-    <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 flex items-center shadow-sm">
-        <i class="fas fa-check-circle mr-3 text-xl"></i>
-        <div>
-            <p class="font-bold">Import Selesai!</p>
-            <p class="text-sm">
-                Berhasil menambahkan <b><%= query.importSuccess %></b> judul baru dan 
-                memperbarui <b><%= query.importExisting %></b> judul yang sudah ada.
-            </p>
+    <% if (typeof query !== 'undefined' && query.importSuccess) { %>
+        <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 flex items-center shadow-sm">
+            <i class="fas fa-check-circle mr-3 text-xl"></i>
+            <div>
+                <p class="font-bold">Import Selesai!</p>
+                <p class="text-sm">
+                    Berhasil menambahkan <b><%= query.importSuccess %></b> judul baru dan 
+                    memperbarui <b><%= query.importExisting %></b> judul yang sudah ada.
+                </p>
+            </div>
+        </div>
+    <% } %>
+
+    <% if (typeof query !== 'undefined' && query.deleteSuccess) { %>
+        <div class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200 flex items-center shadow-sm">
+            <i class="fas fa-trash-alt mr-3 text-xl"></i>
+            <p class="text-sm font-bold">Berhasil menghapus <%= query.deleteSuccess %> buku.</p>
+        </div>
+    <% } %>
+
+    <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 justify-center">
+
+        <div class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
+            <div class="bg-blue-100 text-blue-600 p-3 rounded-full text-xl">
+                📚
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Total Judul</p>
+                <p class="text-2xl font-bold">
+                    <%= totalTitle || 0 %>
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
+            <div class="bg-green-100 text-green-600 p-3 rounded-full text-xl">
+                📖
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Total Buku</p>
+                <p class="text-2xl font-bold">
+                    <%= totalBook || 0 %>
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mb-4 flex flex-wrap gap-2 justify-start">
+        <a href="/admin/books/export" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700">
+            📊 Export Data
+        </a>
+
+        <button onclick="toggleModal('importModal')" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700">
+            📥 Import Excel
+        </button>
+
+        <a href="/admin/books/template" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md font-semibold hover:bg-gray-700">
+            📄 Download Template
+        </a>
+
+        <button onclick="filterIncomplete()" id="btnFilterIncomplete" class="bg-orange-500 text-white px-4 py-2 rounded-md font-bold hover:bg-orange-600 transition shadow-sm">
+            <i class="fas fa-exclamation-circle mr-2"></i> Tampilkan Data Tidak Lengkap
+        </button>
+
+        <button onclick="toggleDeleteMode()" id="btnDeleteMode" class="bg-red-100 text-red-600 px-4 py-2 rounded-md font-bold hover:bg-red-200 border border-red-200 transition">
+            <i class="fas fa-edit mr-2"></i> Mode Hapus Massal
+        </button>
+
+        <button id="btnSelectAllDatabase" onclick="selectAllDatabase()" class="hidden bg-orange-100 text-orange-600 px-4 py-2 rounded-md font-bold hover:bg-orange-200 border border-orange-200 transition">
+            <i class="fas fa-database mr-2"></i> Pilih Seluruh Data Buku (<%= totalTitle %>)
+        </button>
+    </div>
+
+    <div id="bulkActions" class="hidden mb-4 p-4 bg-red-600 text-white rounded-lg flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 shadow-lg">
+        <span id="selectedCount" class="font-bold text-sm sm:text-base">0 buku dipilih</span>
+        <button onclick="openDeleteModal()" class="bg-white text-red-600 px-4 py-2 rounded-md font-bold hover:bg-gray-100 transition whitespace-nowrap text-sm sm:text-base">
+            🗑️ Hapus Sekarang
+        </button>
+    </div>
+
+    <div id="importModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+            <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all w-full max-w-lg mx-auto p-4 sm:p-6 relative">
+                <h3 class="text-lg font-bold mb-4">Import Buku via Excel</h3>
+                
+                <form action="/admin/books/import" method="POST" enctype="multipart/form-data" id="importForm">
+                    <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 transition">
+                        <p class="text-gray-600">Drag & drop file Excel di sini atau <b>Klik untuk memilih</b></p>
+                        <input type="file" name="excelFile" id="fileInput" class="hidden" accept=".xlsx, .xls">
+                        <p id="fileName" class="mt-2 text-blue-600 font-medium"></p>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button type="button" onclick="toggleModal('importModal')" class="px-4 py-2 bg-gray-200 rounded-md">Batal</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Mulai Import</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-<% } %>
 
-<% if (typeof query !== 'undefined' && query.deleteSuccess) { %>
-    <div class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200 flex items-center shadow-sm">
-        <i class="fas fa-trash-alt mr-3 text-xl"></i>
-        <p class="text-sm font-bold">Berhasil menghapus <%= query.deleteSuccess %> buku.</p>
-    </div>
-<% } %>
-
-<div class="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 justify-center">
-
-    <div class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
-        <div class="bg-blue-100 text-blue-600 p-3 rounded-full text-xl">
-            📚
-        </div>
-        <div>
-            <p class="text-gray-500 text-sm">Total Judul</p>
-            <p class="text-2xl font-bold">
-                <%= totalTitle || 0 %>
-            </p>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
-        <div class="bg-green-100 text-green-600 p-3 rounded-full text-xl">
-            📖
-        </div>
-        <div>
-            <p class="text-gray-500 text-sm">Total Buku</p>
-            <p class="text-2xl font-bold">
-                <%= totalBook || 0 %>
-            </p>
-        </div>
-    </div>
-
-</div>
-
-<div class="mb-4 flex flex-wrap gap-2 justify-start">
-    <a href="/admin/books/export" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700">
-        📊 Export Data
-    </a>
-
-    <button onclick="toggleModal('importModal')" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700">
-        📥 Import Excel
-    </button>
-
-    <a href="/admin/books/template" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md font-semibold hover:bg-gray-700">
-        📄 Download Template
-    </a>
-    <button onclick="toggleDeleteMode()" id="btnDeleteMode" class="bg-red-100 text-red-600 px-4 py-2 rounded-md font-bold hover:bg-red-200 border border-red-200 transition">
-        <i class="fas fa-edit mr-2"></i> Mode Hapus Massal
-    </button>
-
-    <button id="btnSelectAllDatabase" onclick="selectAllDatabase()" class="hidden bg-orange-100 text-orange-600 px-4 py-2 rounded-md font-bold hover:bg-orange-200 border border-orange-200 transition">
-        <i class="fas fa-database mr-2"></i> Pilih Seluruh Data Buku (<%= totalTitle %>)
-    </button>
-</div>
-
-<div id="bulkActions" class="hidden mb-4 p-4 bg-red-600 text-white rounded-lg flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 shadow-lg">
-    <span id="selectedCount" class="font-bold text-sm sm:text-base">0 buku dipilih</span>
-    <button onclick="openDeleteModal()" class="bg-white text-red-600 px-4 py-2 rounded-md font-bold hover:bg-gray-100 transition whitespace-nowrap text-sm sm:text-base">
-        🗑️ Hapus Sekarang
-    </button>
-</div>
-
-<div id="importModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-
-        <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all w-full max-w-lg mx-auto p-4 sm:p-6 relative">
-            <h3 class="text-lg font-bold mb-4">Import Buku via Excel</h3>
+    <div class="space-y-4 mb-8">
+        <form action="/admin/books" method="GET">
             
-            <form action="/admin/books/import" method="POST" enctype="multipart/form-data" id="importForm">
-                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 transition">
-                    <p class="text-gray-600">Drag & drop file Excel di sini atau <b>Klik untuk memilih</b></p>
-                    <input type="file" name="excelFile" id="fileInput" class="hidden" accept=".xlsx, .xls">
-                    <p id="fileName" class="mt-2 text-blue-600 font-medium"></p>
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-4">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-search text-blue-600 mr-2"></i> Pencarian Buku
+                </h2>
+                <div class="flex flex-col md:flex-row gap-2">
+                    <div class="flex-grow min-w-0">
+                        <input type="text" name="q" value="<%= query.q || '' %>"
+                            class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Masukkan kata kunci pencarian...">
+                    </div>
+
+                    <div class="md:w-1/5 min-w-0">
+                        <select name="searchBy" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                            <option value="title" <%= query.searchBy === 'title' ? 'selected' : '' %>>Judul</option>
+                            <option value="author" <%= query.searchBy === 'author' ? 'selected' : '' %>>Pengarang</option>
+                            <option value="publisher" <%= query.searchBy === 'publisher' ? 'selected' : '' %>>Penerbit</option>
+                            <option value="subject" <%= query.searchBy === 'subject' ? 'selected' : '' %>>Subjek</option>
+                        </select>
+                    </div>
+
+                    <div class="md:w-1/5 min-w-0">
+                        <select name="matchType" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                            <option value="contains" <%= query.matchType === 'contains' ? 'selected' : '' %>>Salah Satu Isi</option>
+                            <option value="startsWith" <%= query.matchType === 'startsWith' ? 'selected' : '' %>>Dimulai Dengan</option>
+                            <option value="endsWith" <%= query.matchType === 'endsWith' ? 'selected' : '' %>>Diakhiri Dengan</option>
+                            <option value="exact" <%= query.matchType === 'exact' ? 'selected' : '' %>>Tepat (Exact)</option>
+                        </select>
+                    </div>
+
+                    <div class="min-w-0">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold w-full md:w-auto transition shadow-sm">
+                            Cari
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3 flex justify-between items-center">
+                    <div class="flex gap-4 text-xs text-gray-500">
+                        <a href="/admin/books" class="hover:text-blue-600 transition"><i class="fas fa-undo mr-1"></i> Reset Pencarian</a>
+                    </div>
+                    <% if (query.q || query.category || query.subject || query.year) { %>
+                        <span class="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-bold uppercase">Filter Aktif</span>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-blue-100 shadow-sm">
+                <div class="flex items-center mb-3">
+                    <i class="fas fa-sliders-h text-blue-600 mr-2 text-sm"></i>
+                    <span class="text-sm font-bold text-gray-700 uppercase tracking-wider">Filter Data</span>
                 </div>
                 
-                <div class="mt-6 flex justify-end gap-2">
-                    <button type="button" onclick="toggleModal('importModal')" class="px-4 py-2 bg-gray-200 rounded-md">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Mulai Import</button>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div class="min-w-0">
+                        <select name="category" id="categoryAdminSelect" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                            <option value="">Semua Kategori</option>
+                            <% allCategories.forEach(item => { %>
+                                <option value="<%= item.id %>" <%= query.category == item.id ? 'selected' : '' %>><%= item.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="min-w-0">
+                        <select name="subject" id="subjectAdminSelect" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                            <option value="">Semua Subjek</option>
+                            <% allSubjects.forEach(item => { %>
+                                <option value="<%= item.id %>" <%= query.subject == item.id ? 'selected' : '' %>><%= item.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="min-w-0">
+                        <select name="year" id="yearAdminSelect" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                            <option value="">Semua Tahun</option>
+                            <% allYears.forEach(y => { %>
+                                <option value="<%= y %>" <%= query.year == y ? 'selected' : '' %>><%= y %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="min-w-0">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2">
+                            <i class="fas fa-filter text-xs"></i> Terapkan Filter
+                        </button>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
-</div>
 
-<form action="/admin/books" method="GET" class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-    <input 
-        type="text" 
-        name="q" 
-        value="<%= typeof q !== 'undefined' ? q : '' %>" 
-        placeholder="Cari buku..." 
-        class="border p-2 rounded flex-1"
-    >
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 whitespace-nowrap">
-        Cari
-    </button>
-</form>
-
-<div class="overflow-x-auto">
-<table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-    <thead class="bg-gray-100 text-left">
-        <tr>
-            <th class="p-2 sm:p-4">
-                <span class="no-label">No</span>
-            </th>
-            <th class="p-2 sm:p-4 hidden sm:table-cell">Gambar</th>
-            <th class="p-2 sm:p-4">Judul</th>
-            <th class="p-2 sm:p-4 hidden md:table-cell">Pengarang</th>
-            <th class="p-2 sm:p-4 hidden lg:table-cell">Kategori</th>
-            <th class="p-2 sm:p-4">Aksi</th>
-        </tr>
-    </thead>
-    <tbody>
-        <% if (books.length === 0) { %>
-            <tr><td colspan="6" class="p-4 text-center text-gray-500">Belum ada buku.</td></tr>
-        <% } else { %>
-            <% books.forEach((book, index) => { %>
-            <tr class="border-t hover:bg-gray-50">
-                <td class="p-2 sm:p-4 flex items-center gap-2">
-                    <input type="checkbox" name="bookIds" value="<%= book.id %>" class="delete-checkbox hidden cursor-pointer" onchange="updateBulkPanel()">
-                    <span class="text-sm sm:text-base"><%= (currentPage - 1) * limit + index + 1 %></span>
-                </td>
-                <td class="p-2 sm:p-4 hidden sm:table-cell">
-                    <div class="w-12 h-16 sm:w-16 sm:h-24 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                        <% if (book.image) { %><img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
-                        <% } else { %><div class="text-center text-gray-400 p-1"><p style="font-size: 0.5rem;" class="font-serif leading-tight font-bold text-center">SAMPUL<br>BELUM<br>TERSEDIA</p></div><% } %>
-                    </div>
-                </td>
-                <td class="p-2 sm:p-4 font-medium text-sm sm:text-base">
-                    <div class="sm:hidden mb-2">
-                        <div class="w-16 h-20 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden mb-2">
-                            <% if (book.image) { %>
-                                <img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
-                            <% } else { %>
-                                <div class="text-center text-gray-400 p-1">
-                                    <p style="font-size: 0.5rem;" class="font-serif leading-tight font-bold text-center">SAMPUL<br>BELUM<br>TERSEDIA</p>
-                                </div>
-                            <% } %>
-                        </div>
-                    </div>
-                    <div class="font-semibold mb-1"><%= book.title %></div>
-                    <div class="text-xs text-gray-600 sm:hidden">
-                        <div><strong>Pengarang:</strong> <%= book.Authors.map(a => a.name).join(', ') || '-' %></div>
-                        <div><strong>Kategori:</strong> <%= book.Category ? book.Category.name : '-' %></div>
-                    </div>
-                </td>
-                <td class="p-2 sm:p-4 text-sm text-gray-600 hidden md:table-cell"><%= book.Authors.map(a => a.name).join(', ') || '-' %></td>
-                <td class="p-2 sm:p-4 text-sm hidden lg:table-cell"><%= book.Category ? book.Category.name : '-' %></td>
-                <td class="p-2 sm:p-4 text-sm">
-                    <div class="flex flex-col sm:flex-row gap-1 sm:gap-0">
-                        <a href="/admin/books/edit/<%= book.id %>" class="text-blue-600 hover:underline text-xs sm:text-sm">Edit</a>
-                        <span class="hidden sm:inline">|</span>
-                        <a href="/admin/books/delete/<%= book.id %>" onclick="return confirm('Yakin hapus buku ini?')" class="text-red-600 hover:underline text-xs sm:text-sm">Hapus</a>
-                    </div>
-                </td>
+    <div class="overflow-x-auto">
+    <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
+        <thead class="bg-gray-100 text-left">
+            <tr>
+                <th class="p-2 sm:p-4 w-16">No</th>
+                <th class="p-2 sm:p-4 hidden sm:table-cell w-24">Gambar</th>
+                <th class="p-2 sm:p-4">Judul</th>
+                <th class="p-2 sm:p-4 hidden md:table-cell">Status Data</th>
+                <th class="p-2 sm:p-4 hidden lg:table-cell">Kategori</th>
+                <th class="p-2 sm:p-4 w-32 text-center">Aksi</th>
             </tr>
-            <% }) %>
-        <% } %>
-    </tbody>
-</table>
-</div>
+        </thead>
+        <tbody>
+            <% if (books.length === 0) { %>
+                <tr><td colspan="6" class="p-4 text-center text-gray-500">Belum ada buku.</td></tr>
+            <% } else { %>
+                <% books.forEach((book, index) => { 
+                    const hasCategory = !!book.Category;
+                    const hasSubjects = book.Subjects && book.Subjects.length > 0;
+                    const hasShelf = !!book.shelf_location && book.shelf_location.trim() !== "" && book.shelf_location !== "-";
+                    const hasCopies = book.copies && book.copies.length > 0;
+                    const isIncomplete = !hasCategory || !hasSubjects || !hasShelf || !hasCopies;
+                %>
+                <tr class="border-t hover:bg-gray-50 book-row <%= isIncomplete ? 'is-incomplete' : '' %>">
+                    <td class="p-2 sm:p-4">
+                        <input type="checkbox" name="bookIds" value="<%= book.id %>" class="delete-checkbox hidden cursor-pointer" onchange="updateBulkPanel()">
+                        <span><%= (currentPage - 1) * limit + index + 1 %></span>
+                    </td>
+                    <td class="p-2 sm:p-4 hidden sm:table-cell">
+                        <div class="w-12 h-16 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden mx-auto">
+                            <% if (book.image) { %><img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
+                            <% } else { %><div class="text-center text-gray-400 text-[8px] font-bold">NO COVER</div><% } %>
+                        </div>
+                    </td>
+                    <td class="p-2 sm:p-4 font-medium">
+                        <div class="font-semibold"><%= book.title %></div>
+                    </td>
+                    
+                    <td class="p-2 sm:p-4 text-sm hidden md:table-cell text-center"> <% if (isIncomplete) { %>
+                            <span class="bg-yellow-400 text-white text-[10px] px-2 py-1 rounded font-bold uppercase whitespace-nowrap">
+                                Data Required Tidak Lengkap
+                            </span>
+                        <% } else { %>
+                            <span class="text-gray-400 font-bold">-</span>
+                        <% } %>
+                    </td>
 
-<div id="deleteModal" class="fixed inset-0 z-[80] hidden overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen px-4 text-center">
-        <div class="fixed inset-0 bg-black opacity-60" onclick="toggleModal('deleteModal')"></div>
-        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-lg mx-auto p-4 sm:p-6 relative">
-            <div class="text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
-                <h3 id="deleteModalTitle" class="text-xl font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
-                <p id="deleteModalDesc" class="text-gray-500 mb-6 text-sm font-medium">Tindakan ini tidak bisa dibatalkan.</p>
-                <p class="text-xs font-bold text-red-600 uppercase tracking-widest mb-2">Ketik kalimat di bawah ini:</p>
-                <p id="textToType" class="font-mono bg-gray-100 p-3 rounded-lg mb-4 text-red-600 font-bold text-lg select-none shadow-inner border border-gray-200">HAPUS DATA</p>
-                <input type="text" id="confirmInput" class="w-full border-2 border-gray-300 p-3 rounded-xl focus:border-red-500 outline-none text-center" placeholder="Ketik di sini...">
-            </div>
-            <div class="mt-8 flex justify-center gap-3">
-                <button type="button" onclick="toggleModal('deleteModal')" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Batal</button>
-                <button id="btnFinalDelete" disabled class="px-8 py-2.5 bg-red-600 text-white rounded-lg font-bold opacity-50 cursor-not-allowed transition hover:bg-red-700">Hapus Selamanya</button>
+                    <td class="p-2 sm:p-4 text-sm hidden lg:table-cell"><%= book.Category ? book.Category.name : '-' %></td>
+                    
+                    <td class="p-2 sm:p-4 text-center">
+                        <div class="flex justify-center gap-2">
+                            <a href="/admin/books/edit/<%= book.id %>?origin_q=<%= query.q || '' %>&origin_searchBy=<%= query.searchBy || 'title' %>&origin_matchType=<%= query.matchType || 'contains' %>&origin_category=<%= query.category || '' %>&origin_subject=<%= query.subject || '' %>&origin_year=<%= query.year || '' %>&origin_page=<%= currentPage %>" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white w-9 h-9 rounded shadow flex items-center justify-center transition" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            
+                            <button type="button" 
+                                    class="btn-hapus-cepat bg-red-500 hover:bg-red-600 text-white w-9 h-9 rounded shadow flex items-center justify-center transition"
+                                    data-id="<%= book.id %>"
+                                    data-title="<%= book.title %>"
+                                    data-q="<%= query.q || '' %>"
+                                    data-searchby="<%= query.searchBy || 'title' %>"
+                                    data-matchtype="<%= query.matchType || 'contains' %>"
+                                    data-category="<%= query.category || '' %>"
+                                    data-subject="<%= query.subject || '' %>"
+                                    data-year="<%= query.year || '' %>"
+                                    data-page="<%= currentPage %>">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <% }) %>
+            <% } %>
+        </tbody>
+    </table>
+    </div>
+
+    <div id="deleteModal" class="fixed inset-0 z-[80] hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 text-center">
+            <div class="fixed inset-0 bg-black opacity-60" onclick="toggleModal('deleteModal')"></div>
+            <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-lg mx-auto p-4 sm:p-6 relative">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+                    <h3 id="deleteModalTitle" class="text-xl font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
+                    <p id="deleteModalDesc" class="text-gray-500 mb-6 text-sm font-medium">Tindakan ini tidak bisa dibatalkan.</p>
+                    <p class="text-xs font-bold text-red-600 uppercase tracking-widest mb-2">Ketik kalimat di bawah ini:</p>
+                    <p id="textToType" class="font-mono bg-gray-100 p-3 rounded-lg mb-4 text-red-600 font-bold text-lg select-none shadow-inner border border-gray-200">HAPUS DATA</p>
+                    <input type="text" id="confirmInput" class="w-full border-2 border-gray-300 p-3 rounded-xl focus:border-red-500 outline-none text-center" placeholder="Ketik di sini...">
+                </div>
+                <div class="mt-8 flex justify-center gap-3">
+                    <button type="button" onclick="toggleModal('deleteModal')" class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Batal</button>
+                    <button id="btnFinalDelete" disabled class="px-8 py-2.5 bg-red-600 text-white rounded-lg font-bold opacity-50 cursor-not-allowed transition hover:bg-red-700">Hapus Selamanya</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-        <% if (totalPages > 1) { %>
-            <div class="mt-8 flex flex-wrap justify-center items-center gap-1">
-                    <% if (currentPage > 1) { %>
-                        <a href="/admin/books?q=<%= typeof q !== 'undefined' ? q : '' %>&page=<%= parseInt(currentPage) - 1 %>"
-                        class="px-3 py-1 border rounded text-sm bg-white text-gray-600 hover:bg-blue-50">
-                        <i class="fas fa-chevron-left"></i>
-                        </a>
-                    <% } %>
-
-                    <% 
-                        let delta = 2; // Menampilkan 2 halaman di kiri dan 2 di kanan active page
-                        let left = parseInt(currentPage) - delta;
-                        let right = parseInt(currentPage) + delta;
-                        let range = [];
-                        let rangeWithDots = [];
-                        let l;
-
-                        for (let i = 1; i <= totalPages; i++) {
-                            if (i == 1 || i == totalPages || (i >= left && i <= right)) {
-                                range.push(i);
-                            }
-                        }
-
-                        for (let i of range) {
-                            if (l) {
-                                if (i - l === 2) {
-                                    rangeWithDots.push(l + 1);
-                                } else if (i - l !== 1) {
-                                    rangeWithDots.push('...');
-                                }
-                            }
-                            rangeWithDots.push(i);
-                            l = i;
-                        }
-                    %>
-
-                    <% rangeWithDots.forEach(i => { %>
-                        <% if (i === '...') { %>
-                            <span class="px-3 py-1 text-gray-400">...</span>
-                        <% } else { %>
-                            <a href="/admin/books?q=<%= typeof q !== 'undefined' ? q : '' %>&page=<%= i %>"
-                            class="px-3 py-1 border rounded text-sm transition-colors <%= currentPage == i ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-gray-600 hover:bg-blue-50' %>">
-                                <%= i %>
+            <% if (totalPages > 1) { %>
+                <div class="mt-8 flex flex-wrap justify-center items-center gap-1">
+                        <% if (currentPage > 1) { %>
+                            <a href="/admin/books?q=<%= typeof q !== 'undefined' ? q : '' %>&page=<%= parseInt(currentPage) - 1 %>"
+                            class="px-3 py-1 border rounded text-sm bg-white text-gray-600 hover:bg-blue-50">
+                            <i class="fas fa-chevron-left"></i>
                             </a>
                         <% } %>
-                    <% }) %>
 
-                    <% if (currentPage < totalPages) { %>
-                        <a href="/admin/books?q=<%= typeof q !== 'undefined' ? q : '' %>&page=<%= parseInt(currentPage) + 1 %>"
-                        class="px-3 py-1 border rounded text-sm bg-white text-gray-600 hover:bg-blue-50">
-                        <i class="fas fa-chevron-right"></i>
-                        </a>
-                    <% } %>
+                        <% 
+                            let delta = 2; // Menampilkan 2 halaman di kiri dan 2 di kanan active page
+                            let left = parseInt(currentPage) - delta;
+                            let right = parseInt(currentPage) + delta;
+                            let range = [];
+                            let rangeWithDots = [];
+                            let l;
 
-                </div>
-            <% } %>
+                            for (let i = 1; i <= totalPages; i++) {
+                                if (i == 1 || i == totalPages || (i >= left && i <= right)) {
+                                    range.push(i);
+                                }
+                            }
 
-<script>
-    function toggleModal(id) {
-        document.getElementById(id).classList.toggle('hidden');
-    }
+                            for (let i of range) {
+                                if (l) {
+                                    if (i - l === 2) {
+                                        rangeWithDots.push(l + 1);
+                                    } else if (i - l !== 1) {
+                                        rangeWithDots.push('...');
+                                    }
+                                }
+                                rangeWithDots.push(i);
+                                l = i;
+                            }
+                        %>
 
-    let isAllDatabaseSelected = false;
+                        <% rangeWithDots.forEach(i => { %>
+                            <% if (i === '...') { %>
+                                <span class="px-3 py-1 text-gray-400">...</span>
+                            <% } else { %>
+                                <a href="/admin/books?q=<%= typeof q !== 'undefined' ? q : '' %>&page=<%= i %>"
+                                class="px-3 py-1 border rounded text-sm transition-colors <%= currentPage == i ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-gray-600 hover:bg-blue-50' %>">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+                        <% }) %>
 
-    // FUNGSI TOGGLE MODE HAPUS
-    function toggleDeleteMode() {
-        const checkboxes = document.querySelectorAll('.delete-checkbox');
-        const btn = document.getElementById('btnDeleteMode');
-        const btnDB = document.getElementById('btnSelectAllDatabase');
-        
-        checkboxes.forEach(cb => cb.classList.toggle('hidden'));
+                        <% if (currentPage < totalPages) { %>
+                            <a href="/admin/books?q=<%= typeof q !== 'undefined' ? q : '' %>&page=<%= parseInt(currentPage) + 1 %>"
+                            class="px-3 py-1 border rounded text-sm bg-white text-gray-600 hover:bg-blue-50">
+                            <i class="fas fa-chevron-right"></i>
+                            </a>
+                        <% } %>
 
-        if (btn.classList.contains('bg-red-100')) {
-            // Mode Aktif
-            btn.classList.replace('bg-red-100', 'bg-red-600');
-            btn.classList.replace('text-red-600', 'text-white');
-            btn.innerHTML = '<i class="fas fa-times mr-2"></i> Matikan Mode Hapus';
-            btnDB.classList.remove('hidden'); 
-        } else {
-            // Mode Mati (RESET DI SINI)
-            btn.classList.replace('bg-red-600', 'bg-red-100');
-            btn.classList.replace('text-white', 'text-red-600');
-            btn.innerHTML = '<i class="fas fa-edit mr-2"></i> Mode Hapus Massal';
-            btnDB.classList.add('hidden'); 
+                    </div>
+                <% } %>
+
+    <script>
+        // Inisialisasi variabel global
+        let isAllDatabaseSelected = false; 
+        let excludedIds = []; 
+        const totalRecords = parseInt('<%= totalTitle %>') || 0; // Cara aman agar editor tidak merah
+
+        // 1. Fungsi Pilih Semua Data (Lintas Halaman)
+        function selectAllDatabase() {
+            const checkboxes = document.querySelectorAll('.delete-checkbox');
+            const btnAll = document.getElementById('btnSelectAllDatabase');
             
-            // RESET LOGIC
-            isAllDatabaseSelected = false;
-            
-            // Uncheck semua checkbox buku
-            const bookCheckboxes = document.getElementsByName('bookIds');
-            bookCheckboxes.forEach(c => {
-                c.checked = false;
-            });
-
-            // Sembunyikan panel merah
+            if (!isAllDatabaseSelected) {
+                isAllDatabaseSelected = true;
+                excludedIds = []; 
+                checkboxes.forEach(cb => cb.checked = true);
+                
+                btnAll.setAttribute('data-all', 'true');
+                btnAll.innerHTML = '<i class="fas fa-times mr-2"></i> Batalkan Pilihan Semua';
+                btnAll.classList.replace('bg-orange-100', 'bg-gray-800');
+                btnAll.classList.replace('text-orange-600', 'text-white');
+            } else {
+                isAllDatabaseSelected = false;
+                excludedIds = [];
+                checkboxes.forEach(cb => cb.checked = false);
+                
+                btnAll.setAttribute('data-all', 'false');
+                btnAll.innerHTML = `<i class="fas fa-database mr-2"></i> Pilih Seluruh Data Buku (${totalRecords})`;
+                btnAll.classList.replace('bg-gray-800', 'bg-orange-100');
+                btnAll.classList.replace('text-white', 'text-orange-600');
+            }
             updateBulkPanel();
         }
-    }
 
-    function selectAllDatabase() {
-        if (!isAllDatabaseSelected) {
-            isAllDatabaseSelected = true;
-            
-            const checkboxes = document.getElementsByName('bookIds');
-            checkboxes.forEach(c => {
-                c.checked = true; 
-            });
-            
-            const btnDB = document.getElementById('btnSelectAllDatabase');
-            btnDB.classList.replace('bg-orange-100', 'bg-orange-600');
-            btnDB.classList.replace('text-orange-600', 'text-white');
-            btnDB.innerHTML = '<i class="fas fa-undo mr-2"></i> Batalkan Pilihan Seluruh Data';
-
-        } else {
-            isAllDatabaseSelected = false;
-            
-            const checkboxes = document.getElementsByName('bookIds');
-            checkboxes.forEach(c => {
-                c.checked = false; 
-            });
-
-            const btnDB = document.getElementById('btnSelectAllDatabase');
-            btnDB.classList.replace('bg-orange-600', 'bg-orange-100');
-            btnDB.classList.replace('text-white', 'text-orange-600');
-            btnDB.innerHTML = '<i class="fas fa-database mr-2"></i> Pilih Seluruh Data Buku (<%= totalTitle %>)';
-        }
-        
-        updateBulkPanel();
-    }
-
-    // FUNGSI UPDATE TAMPILAN PANEL MERAH
-    function updateBulkPanel() {
-        const checkboxes = document.getElementsByName('bookIds');
-        const checked = Array.from(checkboxes).filter(c => c.checked);
-        const panel = document.getElementById('bulkActions');
-        const countLabel = document.getElementById('selectedCount');
-        const totalTitleInDB = parseInt("<%= totalTitle %>");
-
-        if (checked.length > 0 || isAllDatabaseSelected) {
-            panel.classList.remove('hidden');
-            
-            if (isAllDatabaseSelected) {
-                const uncheckedInPage = checkboxes.length - checked.length;
-                const finalCount = totalTitleInDB - uncheckedInPage;
-                
-                if (uncheckedInPage > 0) {
-                    countLabel.innerText = finalCount + ' buku dipilih';
-                } else {
-                    countLabel.innerText = 'SELURUH data buku (' + totalTitleInDB + ' judul) dipilih';
+        // 2. Listener untuk memantau Uncheck saat mode "Pilih Semua" aktif
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('delete-checkbox')) {
+                const bookId = e.target.value;
+                if (isAllDatabaseSelected) {
+                    if (!e.target.checked) {
+                        if (!excludedIds.includes(bookId)) excludedIds.push(bookId);
+                    } else {
+                        excludedIds = excludedIds.filter(id => id !== bookId);
+                    }
                 }
+                updateBulkPanel();
+            }
+        });
+
+        // 3. Fungsi Update Panel Hitungan
+        function updateBulkPanel() {
+            const checkedCheckboxes = document.querySelectorAll('input[name="bookIds"]:checked');
+            const panel = document.getElementById('bulkActions');
+            const label = document.getElementById('selectedCount');
+            
+            let totalSelected = 0;
+            if (isAllDatabaseSelected) {
+                totalSelected = totalRecords - excludedIds.length;
             } else {
-                countLabel.innerText = checked.length + ' buku dipilih';
+                totalSelected = checkedCheckboxes.length;
             }
-        } else {
-            panel.classList.add('hidden');
-        }
-    }
 
-    // KONFIRMASI INPUT KETIK
-    document.getElementById('confirmInput').addEventListener('input', function(e) {
-        const btn = document.getElementById('btnFinalDelete');
-        const target = document.getElementById('textToType').innerText;
-        if (e.target.value === target) {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        } else {
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-    });
-
-    // BUKA MODAL HAPUS
-    function openDeleteModal() {
-        const title = document.getElementById('deleteModalTitle');
-        const desc = document.getElementById('deleteModalDesc');
-        const targetText = document.getElementById('textToType');
-        
-        if (isAllDatabaseSelected) {
-            title.innerText = "PERINGATAN: HAPUS SELURUH DATABASE";
-            desc.innerText = "Anda akan menghapus seluruh judul buku di sistem (Total: <%= totalTitle %> judul).";
-            targetText.innerText = "HAPUS SEMUA";
-        } else {
-            const count = document.querySelectorAll('input[name="bookIds"]:checked').length;
-            title.innerText = "Konfirmasi Hapus Massal";
-            desc.innerText = "Anda akan menghapus " + count + " buku yang dipilih.";
-            targetText.innerText = "HAPUS DATA";
+            if (totalSelected > 0) {
+                panel.classList.remove('hidden');
+                label.innerText = totalSelected + ' buku dipilih';
+            } else {
+                panel.classList.add('hidden');
+            }
         }
 
-        document.getElementById('confirmInput').value = "";
-        document.getElementById('btnFinalDelete').disabled = true;
-        toggleModal('deleteModal');
-    }
+        // 4. Fungsi Submit Hapus (Satu fungsi untuk semua kondisi)
+        function submitFormHapus(confirmText, originQ = '', originPage = '1') {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/books/delete-multiple';
 
-    // PROSES HAPUS FINAL
-    document.getElementById('btnFinalDelete').addEventListener('click', function() {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/admin/books/delete-multiple';
-
-        if (isAllDatabaseSelected) {
-            const inputAll = document.createElement('input');
-            inputAll.type = 'hidden'; inputAll.name = 'deleteAll'; inputAll.value = 'true';
-            form.appendChild(inputAll);
-
-            const uncheckedIds = Array.from(document.querySelectorAll('input[name="bookIds"]:not(:checked)')).map(cb => cb.value);
-            uncheckedIds.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'excludeIds'; input.value = id;
-                form.appendChild(input);
-            });
-
+            // Kirim kalimat konfirmasi
             const conf = document.createElement('input');
-            conf.type = 'hidden'; conf.name = 'confirmation'; conf.value = 'HAPUS SEMUA';
+            conf.type = 'hidden'; conf.name = 'confirmation'; conf.value = confirmText;
             form.appendChild(conf);
-        } else {
-            const selectedIds = Array.from(document.querySelectorAll('input[name="bookIds"]:checked')).map(cb => cb.value);
-            selectedIds.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'bookIds'; input.value = id;
-                form.appendChild(input);
-            });
-            const conf = document.createElement('input');
-            conf.type = 'hidden'; conf.name = 'confirmation'; conf.value = 'HAPUS DATA';
-            form.appendChild(conf);
-        }
-        document.body.appendChild(form);
-        form.submit();
-    });
 
-    // LOGIKA DRAG DROP IMPORT
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const fileNameDisplay = document.getElementById('fileName');
-    if(dropZone) {
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length) fileNameDisplay.innerText = "File: " + fileInput.files[0].name;
-        });
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-        });
-        dropZone.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length) {
-                fileInput.files = files; 
-                fileNameDisplay.innerText = "File siap: " + files[0].name;
+            if (isAllDatabaseSelected) {
+                const allInput = document.createElement('input');
+                allInput.type = 'hidden'; allInput.name = 'deleteAll'; allInput.value = 'true';
+                form.appendChild(allInput);
+
+                excludedIds.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden'; input.name = 'excludeIds'; input.value = id;
+                    form.appendChild(input);
+                });
+            } else {
+                const selectedIds = Array.from(document.querySelectorAll('input[name="bookIds"]:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0) return;
+                selectedIds.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden'; input.name = 'bookIds'; input.value = id;
+                    form.appendChild(input);
+                });
+            }
+
+            // Kirim data asal agar redirect kembali ke filter yang sama
+            const qInput = document.createElement('input');
+            qInput.type = 'hidden'; qInput.name = 'q'; qInput.value = originQ;
+            form.appendChild(qInput);
+
+            const pageInput = document.createElement('input');
+            pageInput.type = 'hidden'; pageInput.name = 'page'; pageInput.value = originPage;
+            form.appendChild(pageInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // 5. Event Listener untuk tombol Hapus Cepat (Tong Sampah di baris tabel)
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-hapus-cepat');
+            if (btn) {
+                const bookId = btn.getAttribute('data-id');
+                const bookTitle = btn.getAttribute('data-title');
+                const originQ = btn.getAttribute('data-q');
+                const originPage = btn.getAttribute('data-page');
+
+                document.querySelectorAll('.delete-checkbox').forEach(cb => cb.checked = false);
+                const myCheckbox = document.querySelector(`input[name="bookIds"][value="${bookId}"]`);
+                if (myCheckbox) myCheckbox.checked = true;
+
+                Swal.fire({
+                    title: 'Hapus Buku?',
+                    html: `Yakin ingin menghapus buku <b>"${bookTitle}"</b>?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitFormHapus('HAPUS DATA', originQ, originPage);
+                    } else {
+                        if (myCheckbox) myCheckbox.checked = false;
+                        updateBulkPanel();
+                    }
+                });
             }
         });
-    }
-</script>
-<%- include('partials/footer') %>
+
+        // 6. Fungsi UI lainnya
+        function toggleDeleteMode() {
+            const checkboxes = document.querySelectorAll('.delete-checkbox');
+            const btn = document.getElementById('btnDeleteMode');
+            const btnSelectAll = document.getElementById('btnSelectAllDatabase');
+
+            checkboxes.forEach(cb => cb.classList.toggle('hidden'));
+            
+            if (btn.classList.contains('bg-red-100')) {
+                btn.classList.replace('bg-red-100', 'bg-red-600'); 
+                btn.classList.replace('text-red-600', 'text-white');
+                btnSelectAll.classList.remove('hidden');
+            } else {
+                btn.classList.replace('bg-red-600', 'bg-red-100'); 
+                btn.classList.replace('text-white', 'text-red-600');
+                btnSelectAll.classList.add('hidden');
+                
+                isAllDatabaseSelected = false;
+                excludedIds = [];
+                btnSelectAll.setAttribute('data-all', 'false');
+                btnSelectAll.innerHTML = `<i class="fas fa-database mr-2"></i> Pilih Seluruh Data Buku (${totalRecords})`;
+                
+                document.querySelectorAll('.delete-checkbox').forEach(c => c.checked = false);
+                updateBulkPanel();
+            }
+        }
+
+        let isIncompleteFiltered = false;
+        function filterIncomplete() {
+            const rows = document.querySelectorAll('.book-row');
+            const btn = document.getElementById('btnFilterIncomplete');
+            if (!isIncompleteFiltered) {
+                rows.forEach(row => { if (!row.classList.contains('is-incomplete')) row.style.display = 'none'; });
+                btn.innerHTML = '<i class="fas fa-list mr-2"></i> Tampilkan Semua Data';
+                btn.classList.replace('bg-orange-500', 'bg-gray-700');
+                isIncompleteFiltered = true;
+            } else {
+                rows.forEach(row => { row.style.display = ''; });
+                btn.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i> Tampilkan Data Tidak Lengkap';
+                btn.classList.replace('bg-gray-700', 'bg-orange-500');
+                isIncompleteFiltered = false;
+            }
+        }
+
+        function toggleModal(id) {
+            const m = document.getElementById(id);
+            if(m) m.classList.toggle('hidden');
+        }
+
+        function openDeleteModal() {
+            toggleModal('deleteModal');
+        }
+
+        // Input Konfirmasi Ketik
+        const confirmInput = document.getElementById('confirmInput');
+        if(confirmInput){
+            confirmInput.addEventListener('input', function(e) {
+                const btn = document.getElementById('btnFinalDelete');
+                const target = document.getElementById('textToType').innerText;
+                const isMatch = e.target.value === target;
+                btn.disabled = !isMatch;
+                btn.classList.toggle('opacity-50', !isMatch);
+                btn.classList.toggle('cursor-not-allowed', !isMatch);
+            });
+        }
+
+        const btnFinalDelete = document.getElementById('btnFinalDelete');
+        if(btnFinalDelete){
+            btnFinalDelete.onclick = function() {
+                submitFormHapus('HAPUS DATA');
+            };
+        }
+
+        // Import Excel Zone
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        if(dropZone) {
+            dropZone.onclick = () => fileInput.click();
+            fileInput.onchange = () => { 
+                if(fileInput.files.length) document.getElementById('fileName').innerText = "File: " + fileInput.files[0].name; 
+            };
+        }
+    </script>
+    <%- include('partials/footer') %>

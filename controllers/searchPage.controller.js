@@ -9,6 +9,7 @@ module.exports = {
                 searchBy = "title",
                 matchType = "contains",
                 category = "",
+                subject = "",
                 year = "",
                 page = 1,
                 limit = 12
@@ -51,6 +52,9 @@ module.exports = {
             // ============================
             const whereCondition = {};
             if (category) whereCondition.category_id = category;
+            if (subject) {
+                whereCondition['$Subjects.id$'] = subject; 
+            }
             if (year) whereCondition.publish_year = year;
 
             // ============================
@@ -60,9 +64,6 @@ module.exports = {
                 switch (searchBy) {
                     case "title":
                         whereCondition.title = { [operator]: searchValue };
-                        break;
-                    case "isbn":
-                        whereCondition.isbn = { [operator]: searchValue };
                         break;
                     case "call_number":
                         whereCondition.call_number = { [operator]: searchValue };
@@ -82,7 +83,6 @@ module.exports = {
                     case "all":
                         whereCondition[Op.or] = [
                             { title: { [operator]: searchValue } },
-                            { isbn: { [operator]: searchValue } },
                             { call_number: { [operator]: searchValue } }
                         ];
                         includeOptions.forEach((inc, i) => {
@@ -111,6 +111,7 @@ module.exports = {
             // SIDEBAR DATA
             // ============================
             const categories = await Category.findAll({ order: [["name", "ASC"]] });
+            const subjects = await Subject.findAll({ order: [["name", "ASC"]] });
             const years = await Book.findAll({
                 attributes: [
                     [Book.sequelize.fn("DISTINCT", Book.sequelize.col("publish_year")), "publish_year"]
@@ -134,6 +135,7 @@ module.exports = {
                 totalPages: Math.ceil(booksData.count / limit),
                 sidebarData: {
                     categories,
+                    subjects,
                     years: years.map(y => ({ year: y.publish_year }))
                 },
                 query: {
@@ -141,6 +143,7 @@ module.exports = {
                     searchBy,
                     matchType,
                     category,
+                    subject,
                     year
                 }
             });

@@ -147,7 +147,8 @@ module.exports = {
                 book: bookData,
                 qrImage,
                 relatedBooks: relatedFormatted,
-                copies: copyRows
+                copies: copyRows,
+                query: req.query
             });
 
         } catch (err) {
