@@ -5,7 +5,7 @@
 
 
     <% if (typeof query !== 'undefined' && query.importSuccess) { %>
-        <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 flex items-center shadow-sm">
+        <div class="alert-box mb-4 p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 flex items-center shadow-sm">
             <i class="fas fa-check-circle mr-3 text-xl"></i>
             <div>
                 <p class="font-bold">Import Selesai!</p>
@@ -18,9 +18,23 @@
     <% } %>
 
     <% if (typeof query !== 'undefined' && query.deleteSuccess) { %>
-        <div class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200 flex items-center shadow-sm">
+        <div class="alert-box mb-4 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200 flex items-center shadow-sm">
             <i class="fas fa-trash-alt mr-3 text-xl"></i>
             <p class="text-sm font-bold">Berhasil menghapus <%= query.deleteSuccess %> buku.</p>
+        </div>
+    <% } %>
+
+    <% if (typeof query !== 'undefined' && query.updateSuccess) { %>
+        <div class="alert-box mb-4 p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 flex items-center shadow-sm">
+            <i class="fas fa-check-circle mr-3 text-xl"></i>
+            <p class="text-sm font-bold">Berhasil memperbarui data buku.</p>
+        </div>
+    <% } %>
+
+    <% if (typeof query !== 'undefined' && query.addSuccess) { %>
+        <div class="alert-box mb-4 p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 flex items-center shadow-sm">
+            <i class="fas fa-plus-circle mr-3 text-xl"></i>
+            <p class="text-sm font-bold">Berhasil menambahkan buku baru ke dalam database.</p>
         </div>
     <% } %>
 
@@ -591,14 +605,62 @@
             };
         }
 
-        // Import Excel Zone
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert-box');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.transition = "opacity 0.6s ease";
+                    alert.style.opacity = "0";
+                    setTimeout(() => alert.remove(), 600);
+                }, 2000);
+            });
+        });
+
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileName');
+
         if(dropZone) {
+            // 1. Klik untuk pilih file
             dropZone.onclick = () => fileInput.click();
+
+            // 2. Saat file dipilih via dialog
             fileInput.onchange = () => { 
-                if(fileInput.files.length) document.getElementById('fileName').innerText = "File: " + fileInput.files[0].name; 
+                if(fileInput.files.length) fileNameDisplay.innerText = "File terpilih: " + fileInput.files[0].name; 
             };
+
+            // 3. Logika Drag & Drop
+            // Mencegah browser membuka file saat di-drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            // Efek visual saat file ditarik di atas box
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('bg-blue-50', 'border-blue-500');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('bg-blue-50', 'border-blue-500');
+                }, false);
+            });
+
+            // Saat file dilepas (Drop)
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    fileInput.files = files; // Masukkan file ke dalam input
+                    fileNameDisplay.innerText = "File terpilih: " + files[0].name;
+                }
+            }, false);
         }
     </script>
     <%- include('partials/footer') %>

@@ -21,6 +21,40 @@ const EXCEL_COLUMNS = [
     { header: 'Abstrak', key: 'abstract', width: 50 }
 ];
 
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+// Helper function untuk download gambar
+const downloadImage = async (url, title) => {
+    try {
+        if (!url || !url.startsWith('http')) return null;
+        
+        // Buat nama file aman dari judul buku
+        const fileName = `${Date.now()}-${title.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 50)}.jpg`;
+        const uploadPath = path.join(__dirname, '../public/image/uploads', fileName);
+        
+        const response = await axios({
+            url,
+            method: 'GET',
+            responseType: 'stream'
+        });
+
+        return new Promise((resolve, reject) => {
+            const writer = fs.createWriteStream(uploadPath);
+            response.data.pipe(writer);
+            writer.on('finish', () => resolve(fileName));
+            writer.on('error', (err) => {
+                console.error("Download Error:", err);
+                resolve(null);
+            });
+        });
+    } catch (error) {
+        console.error("URL Image Error:", error.message);
+        return null;
+    }
+};
+
 module.exports = {
     listBooks: async (req, res) => {
         try {
@@ -188,7 +222,8 @@ module.exports = {
                 { header: 'Subjek (pisahkan dengan koma)', key: 'subjects', width: 30 },
                 { header: 'Nomor Induk (pisahkan dengan koma)', key: 'no_induk', width: 40 },
                 { header: 'Catatan', key: 'notes', width: 30 },
-                { header: 'Abstrak', key: 'abstract', width: 50 }
+                { header: 'Abstrak', key: 'abstract', width: 50 },
+                { header: 'Gambar', key: 'image', width: 30 }
             ];
 
             books.forEach(book => {
@@ -208,7 +243,8 @@ module.exports = {
                     subjects: book.Subjects ? book.Subjects.map(s => s.name).join(', ') : '',
                     no_induk: book.copies ? book.copies.map(c => c.no_induk).join(', ') : '',
                     notes: book.notes,
-                    abstract: book.abstract
+                    abstract: book.abstract,
+                    image: book.image
                 });
             });
 
@@ -243,10 +279,11 @@ module.exports = {
                 { header: 'Subjek (pisahkan dengan koma)', key: 'subjects', width: 30 },
                 { header: 'Nomor Induk (pisahkan dengan koma)', key: 'no_induk', width: 40 },
                 { header: 'Catatan', key: 'notes', width: 30 },
-                { header: 'Abstrak', key: 'abstract', width: 50 }
+                { header: 'Abstrak', key: 'abstract', width: 50 },
+                { header: 'URL Gambar / Nama File (Contoh: https://link.com/f.jpg ATAU buku1.jpg)', key: 'imageUrl', width: 50 }
             ];
 
-            worksheet.addRow({ title: 'Contoh Judul Buku', category: 'Fiksi', authors: 'Penulis A, Penulis B', no_induk: 'B001, B002' });
+            worksheet.addRow({ title: 'Contoh Judul Buku', category: 'Fiksi', authors: 'Penulis A, Penulis B', no_induk: 'B001, B002',imageUrl: 'https://upload.wikimedia.org/wikipedia/id/8/8e/Laskar_pelangi_sampul.jpg' });
 
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader('Content-Disposition', 'attachment; filename=Template_Import_Buku.xlsx');
@@ -287,57 +324,37 @@ module.exports = {
                     subjects: row.getCell(13).text,
                     noInduk: row.getCell(14).text,
                     notes: row.getCell(15).text,
-                    abstract: row.getCell(16).text
+                    abstract: row.getCell(16).text,
+                    imageInput: row.getCell(17).text.trim() // Nama file atau URL
                 });
             });
-
-            const processRel = async (book, input, Model, setter) => {
-                if (input === null || input === undefined) return;
-
-                // ⛑️ paksa jadi string
-                const safeInput = String(input).trim();
-                if (!safeInput) return;
-
-                const names = safeInput
-                    .split(/[\n,]+/)
-                    .map(n => n.trim())
-                    .filter(n => n.length > 0);
-
-                const ids = [];
-
-                for (const name of names) {
-                    if (name.length > 191) {
-                        console.log(`⚠️ Skip terlalu panjang: ${name}`);
-                        continue;
-                    }
-
-                    const [obj] = await Model.findOrCreate({
-                        where: { name }
-                    });
-
-                    ids.push(obj.id);
-                }
-
-                if (ids.length && typeof book[setter] === 'function') {
-                    await book[setter](ids);
-                }
-            };
 
             for (const data of booksData) {
                 if (!data.title) continue;
 
-                let categoryId = null;
-                const finalCategoryName = (data.categoryName && data.categoryName.trim() !== "") 
-                                            ? data.categoryName.trim() 
-                                            : 'Tanpa Kategori';
+                let book = await Book.findOne({ where: { title: data.title } });
                 
-                const [cat] = await Category.findOrCreate({ 
-                    where: { name: finalCategoryName } 
-                });
-                categoryId = cat.id;
-                const [book, created] = await Book.findOrCreate({
-                    where: { title: data.title },
-                    defaults: {
+                // --- LOGIKA PENENTUAN GAMBAR ---
+                let finalImageName = null;
+                if (data.imageInput) {
+                    if (data.imageInput.startsWith('http')) {
+                        // Jika URL, download
+                        finalImageName = await downloadImage(data.imageInput, data.title);
+                    } else {
+                        // Jika Nama File, cek apakah filenya ada di folder uploads
+                        const checkPath = path.join(__dirname, '../public/image/uploads', data.imageInput);
+                        if (fs.existsSync(checkPath)) {
+                            finalImageName = data.imageInput;
+                        }
+                    }
+                }
+
+                if (!book) {
+                    // --- BUKU BARU ---
+                    const finalCategoryName = (data.categoryName && data.categoryName.trim() !== "") ? data.categoryName.trim() : 'Tanpa Kategori';
+                    const [cat] = await Category.findOrCreate({ where: { name: finalCategoryName } });
+
+                    book = await Book.create({
                         title: data.title,
                         edition: data.edition,
                         publish_year: data.publish_year,
@@ -349,72 +366,67 @@ module.exports = {
                         shelf_location: data.shelf_location,
                         notes: data.notes,
                         abstract: data.abstract,
-                        category_id: categoryId
-                    }
-                });
-
-                if (created) {
+                        category_id: cat.id,
+                        image: finalImageName
+                    });
                     successCount++;
                 } else {
+                    // --- LENGKAPI DATA ---
+                    const updateData = {};
+                    const fields = ['edition', 'publish_year', 'publish_place', 'physical_description', 'isbn', 'call_number', 'language', 'shelf_location', 'notes', 'abstract'];
+                    
+                    fields.forEach(f => {
+                        if ((!book[f] || book[f] === '-' || book[f] === '') && data[f]) {
+                            updateData[f] = data[f];
+                        }
+                    });
+
+                    // Update gambar jika di database masih kosong
+                    if ((!book.image || book.image === '') && finalImageName) {
+                        updateData.image = finalImageName;
+                    }
+
+                    if (Object.keys(updateData).length > 0) {
+                        await book.update(updateData);
+                    }
                     existingCount++;
                 }
 
+                // --- LOGIKA NOMOR INDUK (Selalu diproses) ---
                 if (data.noInduk) {
                     const nos = data.noInduk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
-                    
                     for (const n of nos) {
-                        try {
-                            const [copy, copyCreated] = await BookCopy.findOrCreate({
-                                where: { no_induk: n }, 
-                                defaults: { 
-                                    book_id: book.id, 
-                                    status: 'tersedia' 
-                                }
-                            });
-
-                        } catch (copyErr) {
-                            console.log(`---> Skip Nomor Induk [${n}]: Sudah digunakan oleh buku lain.`);
-                            continue; 
-                        }
+                        await BookCopy.findOrCreate({
+                            where: { no_induk: n }, 
+                            defaults: { book_id: book.id, status: 'tersedia' }
+                        });
                     }
-                    
                     const countTotal = await BookCopy.count({ where: { book_id: book.id } });
                     await book.update({ stock_total: countTotal });
                 }
 
-                const processAuthors = async (input) => {
+                // --- LOGIKA RELASI (Lengkapi data relasi) ---
+                const processRel = async (bookObj, input, Model, getter, setter) => {
                     if (!input) return;
-
-                    const authors = input
-                        .replace(/\(pengarang\)/gi, ',')
-                        .replace(/\(editor\)/gi, ',')
-                        .split(/[\n,]+/)
-                        .map(a => a.trim())
-                        .filter(a => a.length > 0);
-
-                    const ids = [];
-
-                    for (const name of authors) {
-                        if (name.length > 191) {
-                            console.log(`⚠️ Skip author terlalu panjang: ${name}`);
-                            continue;
-                        }
-
-                        const [author] = await Author.findOrCreate({
-                            where: { name }
-                        });
-
-                        ids.push(author.id);
+                    const names = String(input).split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
+                    
+                    const currentItems = await bookObj[getter]();
+                    const existingIds = currentItems.map(item => item.id);
+                    
+                    const newIds = [];
+                    for (const name of names) {
+                        const [obj] = await Model.findOrCreate({ where: { name } });
+                        newIds.push(obj.id);
                     }
 
-                    if (ids.length) {
-                        await book.setAuthors(ids);
-                    }
+                    // Gabungkan ID lama dan baru agar tidak duplikat (Set)
+                    const finalIds = [...new Set([...existingIds, ...newIds])];
+                    await bookObj[setter](finalIds);
                 };
 
-                await processAuthors(data.authors);
-                await processRel(book, data.publishers, Publisher, 'setPublishers');
-                await processRel(book, data.subjects, Subject, 'setSubjects');
+                await processRel(book, data.authors, Author, 'getAuthors', 'setAuthors');
+                await processRel(book, data.publishers, Publisher, 'getPublishers', 'setPublishers');
+                await processRel(book, data.subjects, Subject, 'getSubjects', 'setSubjects');
             }
 
             res.redirect(`/admin/books?importSuccess=${successCount}&importExisting=${existingCount}`);
@@ -575,10 +587,24 @@ module.exports = {
             });
 
             if (data.no_induk) {
-                const noIndukRaw = data.no_induk;
-                const noIndukArray = noIndukRaw.split(/[\n,]+/).map(item => item.trim()).filter(item => item !== "");
+                const noIndukArray = data.no_induk.split(/[\n,]+/).map(item => item.trim()).filter(item => item !== "");
 
                 if (noIndukArray.length > 0) {
+                    const existingCopies = await BookCopy.findAll({
+                        where: { no_induk: { [Op.in]: noIndukArray } }
+                    });
+
+                    if (existingCopies.length > 0) {
+                        const duplicateNumbers = existingCopies.map(c => c.no_induk).join(', ');
+                        
+                        await book.destroy(); 
+
+                        return res.status(400).json({ 
+                            success: false, 
+                            message: `Nomor Induk [${duplicateNumbers}] sudah terdaftar untuk buku lain!` 
+                        });
+                    }
+
                     const copyData = noIndukArray.map(nomor => ({
                         book_id: book.id,
                         no_induk: nomor,
@@ -586,23 +612,19 @@ module.exports = {
                     }));
 
                     await BookCopy.bulkCreate(copyData);
-                    
                     await book.update({ stock_total: noIndukArray.length });
                 }
             }
 
-            // =====================
-            // RELATIONS
-            // =====================
             if (authorIds.length) await book.setAuthors(authorIds);
             if (publisherIds.length) await book.setPublishers(publisherIds);
             if (subjectIds.length) await book.setSubjects(subjectIds);
 
-            res.redirect("/admin/books");
+            return res.status(200).json({ success: true, redirectUrl: "/admin/books?addSuccess=1" });
 
         } catch (err) {
-            console.log("Error creating book:", err);
-            res.status(500).send("Error creating book: " + err.message);
+            console.error(err);
+            res.status(500).json({ success: false, message: "Terjadi kesalahan sistem: " + err.message });
         }
     },
 
@@ -649,110 +671,52 @@ module.exports = {
    updateBook: async (req, res) => {
         try {
             const book = await Book.findByPk(req.params.id);
-            if (!book) return res.status(404).send("Buku tidak ditemukan");
+            if (!book) return res.status(404).json({ success: false, message: "Buku tidak ditemukan" });
 
             const data = req.body;
 
+            // 1. Validasi Required
             if (!data.title || !data.category_id || !data.subjects || !data.shelf_location || !data.no_induk) {
-                return res.status(400).send("Gagal: Data wajib (Judul, Kategori, Subjek, Lokasi, Nomor Induk) tidak boleh kosong!");
+                return res.status(400).json({ success: false, message: "Gagal: Data wajib tidak boleh kosong!" });
             }
-            
-            const originQ = data.origin_q || "";
-            const originPage = data.origin_page || "1";
-            const originSearchBy = data.origin_searchBy || "title";
-            const originMatchType = data.origin_matchType || "contains";
-            
-            const originCategory = data.origin_category || "";
-            const originSubject = data.origin_subject || "";
-            const originYear = data.origin_year || "";
 
+            // Simpan parameter origin untuk redirect balik ke filter asal
             const queryParams = new URLSearchParams({
-                q: originQ,
-                searchBy: originSearchBy,
-                matchType: originMatchType,
-                category: originCategory,
-                subject: originSubject,
-                year: originYear,
-                page: originPage
+                q: data.origin_q || "",
+                searchBy: data.origin_searchBy || "title",
+                matchType: data.origin_matchType || "contains",
+                category: data.origin_category || "",
+                subject: data.origin_subject || "",
+                year: data.origin_year || "",
+                page: data.origin_page || "1"
             });
 
-            // =========================
-            // CATEGORY
-            // =========================
-            let categoryId = null;
-            if (data.category_id) {
-                const cat = Array.isArray(data.category_id)
-                    ? data.category_id[0]
-                    : data.category_id;
-
-                if (isNaN(cat)) {
-                    const newCategory = await Category.create({ name: String(cat) });
-                    categoryId = newCategory.id;
-                } else {
-                    categoryId = cat;
-                }
-            }
-
-            // =========================
-            // AUTHORS
-            // =========================
-            let authorIds = [];
-            if (data.authors) {
-                const authorsArray = Array.isArray(data.authors)
-                    ? data.authors
-                    : [data.authors];
-
-                for (const a of authorsArray) {
-                    if (isNaN(a)) {
-                        const newAuthor = await Author.create({ name: String(a) });
-                        authorIds.push(newAuthor.id);
-                    } else {
-                        authorIds.push(a);
+            // 2. VALIDASI NOMOR INDUK (Cek apakah nomor induk sudah dipakai buku lain)
+            const noIndukArray = data.no_induk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
+            if (noIndukArray.length > 0) {
+                const duplicateInOtherBook = await BookCopy.findOne({
+                    where: {
+                        no_induk: { [Op.in]: noIndukArray },
+                        book_id: { [Op.ne]: book.id } // Kecualikan buku yang sedang diedit ini
                     }
+                });
+
+                if (duplicateInOtherBook) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: `Gagal: Nomor Induk [${duplicateInOtherBook.no_induk}] sudah terdaftar untuk buku lain!` 
+                    });
                 }
             }
 
-            // =========================
-            // PUBLISHERS
-            // =========================
-            let publisherIds = [];
-            if (data.publishers) {
-                const publishersArray = Array.isArray(data.publishers)
-                    ? data.publishers
-                    : [data.publishers];
-
-                for (const p of publishersArray) {
-                    if (isNaN(p)) {
-                        const newPublisher = await Publisher.create({ name: String(p) });
-                        publisherIds.push(newPublisher.id);
-                    } else {
-                        publisherIds.push(p);
-                    }
-                }
+            // 3. Update Kategori (Jika input baru/string)
+            let categoryId = data.category_id;
+            if (isNaN(categoryId)) {
+                const [newCategory] = await Category.findOrCreate({ where: { name: categoryId } });
+                categoryId = newCategory.id;
             }
 
-            // =========================
-            // SUBJECTS
-            // =========================
-            let subjectIds = [];
-            if (data.subjects) {
-                const subjectsArray = Array.isArray(data.subjects)
-                    ? data.subjects
-                    : [data.subjects];
-
-                for (const s of subjectsArray) {
-                    if (isNaN(s)) {
-                        const newSubject = await Subject.create({ name: String(s) });
-                        subjectIds.push(newSubject.id);
-                    } else {
-                        subjectIds.push(s);
-                    }
-                }
-            }
-
-            // =========================
-            // UPDATE BOOK DATA (TANPA STOCK)
-            // =========================
+            // 4. Update Data Utama
             await book.update({
                 title: data.title,
                 edition: data.edition,
@@ -765,52 +729,46 @@ module.exports = {
                 notes: data.notes,
                 language: data.language,
                 shelf_location: data.shelf_location,
-                category_id: data.category_id
+                category_id: categoryId
             });
 
-            // =========================
-            // UPDATE BOOK COPIES (NO INDUK)
-            // =========================
-            if (data.no_induk) {
-                const noIndukArray = data.no_induk
-                    .split(/[\n,]+/)
-                    .map(n => n.trim())
-                    .filter(n => n !== "");
+            // 5. Update Nomor Induk (Hapus lama, Insert baru)
+            await BookCopy.destroy({ where: { book_id: book.id } });
+            const copyData = noIndukArray.map(nomor => ({
+                book_id: book.id,
+                no_induk: nomor,
+                status: 'tersedia'
+            }));
+            await BookCopy.bulkCreate(copyData);
+            await book.update({ stock_total: noIndukArray.length });
 
-                // 1. Hapus semua copy lama
-                await BookCopy.destroy({
-                    where: { book_id: book.id }
-                });
-
-                // 2. Insert ulang copy baru
-                if (noIndukArray.length > 0) {
-                    const copyData = noIndukArray.map(nomor => ({
-                        book_id: book.id,
-                        no_induk: nomor,
-                        status: 'tersedia'
-                    }));
-
-                    await BookCopy.bulkCreate(copyData);
-
-                    // 3. Update stock_total otomatis
-                    await book.update({
-                        stock_total: noIndukArray.length
-                    });
+            // 6. Update Relasi (Authors, Publishers, Subjects)
+            // Logika findOrCreate untuk Author
+            const authorIds = [];
+            if (data.authors) {
+                const authorsArray = Array.isArray(data.authors) ? data.authors : [data.authors];
+                for (const a of authorsArray) {
+                    if (isNaN(a)) {
+                        const [newAuthor] = await Author.findOrCreate({ where: { name: a } });
+                        authorIds.push(newAuthor.id);
+                    } else { authorIds.push(a); }
                 }
             }
+            await book.setAuthors(authorIds);
 
-            // =========================
-            // UPDATE RELATIONS
-            // =========================
-            if (authorIds.length) await book.setAuthors(authorIds);
-            if (publisherIds.length) await book.setPublishers(publisherIds);
-            if (subjectIds.length) await book.setSubjects(subjectIds);
+            // Ulangi logika isNaN untuk Publisher & Subject jika perlu, atau set langsung:
+            if (data.publishers) await book.setPublishers(data.publishers);
+            if (data.subjects) await book.setSubjects(data.subjects);
 
-            res.redirect(`/admin/books?${queryParams.toString()}`);
+            // 7. Respon Sukses dalam format JSON
+            return res.status(200).json({ 
+                success: true, 
+                redirectUrl: `/admin/books?${queryParams.toString()}&updateSuccess=1` 
+            });
 
         } catch (err) {
             console.error(err);
-            res.status(500).send("Gagal memperbarui buku: " + err.message);
+            res.status(500).json({ success: false, message: "Gagal memperbarui buku: " + err.message });
         }
     },
 

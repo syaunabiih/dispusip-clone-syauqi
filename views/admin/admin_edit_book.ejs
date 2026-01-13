@@ -2,8 +2,19 @@
 
 <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<h1 class="text-2xl font-bold mb-6">✏️ Edit Buku</h1>
+<div class="flex items-center gap-4 mb-6">
+    <% 
+        // Logika URL Kembali ke filter asal
+        const backUrl = `/admin/books?q=${query.origin_q || ''}&searchBy=${query.origin_searchBy || 'title'}&matchType=${query.origin_matchType || 'contains'}&category=${query.origin_category || ''}&subject=${query.origin_subject || ''}&year=${query.origin_year || ''}&page=${query.origin_page || '1'}`;
+    %>
+    <a href="<%= backUrl %>" class="flex items-center gap-2 px-4 py-2 bg-white text-black border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-sm">
+        <i class="fas fa-arrow-left text-sm"></i>
+        Kembali
+    </a>
+    <h1 class="text-2xl font-bold italic">✏️ Edit Buku</h1>
+</div>
 
 <form 
     action="/admin/books/edit/<%= book.id %>" 
@@ -132,7 +143,7 @@
 
 <!-- LOKASI RAK (POPUP MAP) -->
     <div>
-    <<label class="font-medium mb-2 block">Lokasi Rak <span class="text-red-500">*</span></label>
+    <label class="font-medium mb-2 block">Lokasi Rak <span class="text-red-500">*</span></label>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <input type="hidden" name="shelf_location" id="shelf_location" value="<%= book.shelf_location || '' %>" required>
         <!-- Display nilai yang dipilih -->
@@ -755,22 +766,48 @@
         updateShelfLocationDisplay(shelfLocationInput.value);
     }
 
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const shelf = document.getElementById('shelf_location').value;
-        const title = document.getElementsByName('title')[0].value;
-        const category = document.getElementById('category-select').value;
-        const subjects = document.getElementById('subject-select').value; // TomSelect values
-        const noInduk = document.getElementsByName('no_induk')[0].value;
+    document.querySelector('form').addEventListener('submit', async function(e) {
+        e.preventDefault(); 
 
-        if (!title || !category || !subjects || subjects.length === 0 || !shelf || !noInduk) {
-            e.preventDefault();
-            Swal.fire({
-                title: 'Data Belum Lengkap!',
-                text: 'Judul, Kategori, Subjek, Lokasi Rak, dan Nomor Induk wajib diisi.',
-                icon: 'warning',
-                confirmButtonColor: '#3b82f6'
+        const form = e.target;
+        const formData = new FormData(form);
+
+        Swal.fire({
+            title: 'Menyimpan perubahan...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
             });
-            return false;
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Data buku telah diperbarui.',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    window.location.href = result.redirectUrl;
+                });
+            } else {
+                // Jika server mengirimkan error (seperti duplikat No Induk)
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Update',
+                    text: result.message || 'Terjadi kesalahan sistem.',
+                    confirmButtonColor: '#3b82f6'
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
         }
     });
 </script>

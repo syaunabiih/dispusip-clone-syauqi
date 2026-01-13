@@ -1,94 +1,110 @@
 <%- include('partials/header', { title: 'Daftar Kategori', active: 'category' }) %>
 
-<h1 class="text-2xl font-bold mb-6">Daftar Kategori</h1>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- SEARCH -->
-<form action="/admin/categories" method="GET" class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-    <input 
-        type="text" 
-        name="q" 
-        value="<%= typeof q !== 'undefined' ? q : '' %>" 
-        placeholder="Cari kategori..." 
-        class="border p-2 rounded flex-1"
-    >
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 whitespace-nowrap">
-        Cari
-    </button>
-</form>
+<h1 class="text-2xl font-bold mb-6">📂 Daftar Kategori</h1>
 
-<div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
-    <h1 class="text-xl sm:text-2xl font-bold">Daftar Kategori</h1>
+<div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+        <form action="/admin/categories" method="GET" class="flex-1 flex gap-2">
+            <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="<%= typeof q !== 'undefined' ? q : '' %>" 
+                    placeholder="Cari nama kategori..." 
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm"
+                >
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-sm">
+                Cari
+            </button>
+        </form>
 
-    <button 
-        onclick="openAddModal()"
-        class="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 whitespace-nowrap">
-        ➕ Tambah Kategori
-    </button>
+        <button 
+            onclick="openAddModal()"
+            class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-sm flex items-center justify-center gap-2">
+            <i class="fas fa-plus"></i> Tambah Kategori
+        </button>
+    </div>
 </div>
 
-<!-- TABEL -->
-<div class="overflow-x-auto">
-<table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-    <thead class="bg-gray-100 text-left">
-        <tr>
-            <th class="p-2 sm:p-4">No</th>
-            <th class="p-2 sm:p-4">Nama Kategori</th>
-            <th class="p-2 sm:p-4">Aksi</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        <% if (categories.length === 0) { %>
+<div class="overflow-x-auto bg-white rounded-xl shadow-md border border-gray-200">
+    <table class="min-w-full">
+        <thead class="bg-gray-100 border-b border-gray-200">
             <tr>
-                <td colspan="3" class="p-4 text-center text-gray-500">
-                    Belum ada kategori.
-                </td>
+                <th class="p-4 w-20 text-left font-bold text-gray-700">No</th>
+                <th class="p-4 text-left font-bold text-gray-700">Nama Kategori</th>
+                <th class="p-4 w-32 text-center font-bold text-gray-700">Aksi</th>
             </tr>
-        <% } else { %>
-            <% categories.forEach((category, index) => { %>
-                <tr class="border-t hover:bg-gray-50">
-                    <td class="p-2 sm:p-4 text-sm sm:text-base"><%= index + 1 %></td>
-                    <td class="p-2 sm:p-4 text-sm sm:text-base"><%= category.name %></td>
-                    <td class="p-2 sm:p-4 text-sm sm:text-base">
-                        <button
-                            onclick="openEditModal('<%= category.id %>', '<%= category.name %>')"
-                            class="text-blue-600 hover:underline">
-                            Edit
-                        </button>
-                        |
-                        <a 
-                            href="/admin/categories/delete/<%= category.id %>" 
-                            onclick="return confirm('Apakah yakin ingin menghapus kategori ini?');"
-                            class="text-red-600 hover:underline"
-                        >
-                            Hapus
-                        </a>
+        </thead>
+
+        <tbody class="divide-y divide-gray-100">
+            <% if (categories.length === 0) { %>
+                <tr>
+                    <td colspan="3" class="p-8 text-center text-gray-500 italic">
+                        <i class="fas fa-folder-open mb-2 text-3xl block text-gray-300"></i>
+                        Belum ada kategori ditemukan.
                     </td>
                 </tr>
-            <% }) %>
-        <% } %>
-    </tbody>
-</table>
+            <% } else { %>
+                <% categories.forEach((category, index) => { %>
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4 text-gray-600 font-medium"><%= index + 1 %></td>
+                        <td class="p-4 text-gray-800 font-semibold"><%= category.name %></td>
+                        <td class="p-4">
+                            <div class="flex justify-center gap-2">
+                                <button
+                                    onclick="openEditModal('<%= category.id %>', '<%= category.name %>')"
+                                    class="bg-blue-500 hover:bg-blue-600 text-white w-9 h-9 rounded shadow flex items-center justify-center transition" 
+                                    title="Edit Kategori">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                
+                                <button 
+                                    onclick="confirmDelete('<%= category.id %>', '<%= category.name %>')"
+                                    class="bg-red-500 hover:bg-red-600 text-white w-9 h-9 rounded shadow flex items-center justify-center transition"
+                                    title="Hapus Kategori">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            <% } %>
+        </tbody>
+    </table>
 </div>
 
-<!-- MODAL ADD -->
-<div id="addModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg w-full max-w-md p-4 sm:p-6">
-        <h2 class="text-lg font-bold mb-4">Tambah Kategori</h2>
+<div id="addModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[100] p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-green-100 text-green-600 p-3 rounded-full">
+                <i class="fas fa-folder-plus text-xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">Tambah Kategori</h2>
+        </div>
 
         <form action="/admin/categories/add" method="POST">
-            <input 
-                type="text" 
-                name="name" 
-                required
-                placeholder="Nama kategori"
-                class="w-full border p-2 rounded mb-4">
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Nama Kategori</label>
+                <input 
+                    type="text" 
+                    name="name" 
+                    required 
+                    placeholder="Contoh: Fiksi, Sejarah, Teknik"
+                    class="w-full border-2 border-gray-200 p-3 rounded-xl focus:border-blue-500 outline-none transition">
+            </div>
 
-            <div class="flex flex-col sm:flex-row justify-end gap-2">
-                <button type="button" onclick="closeAddModal()" class="w-full sm:w-auto px-4 py-2 border rounded transition-colors">
+            <div class="flex gap-3">
+                <button type="button" onclick="closeAddModal()" class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">
                     Batal
                 </button>
-                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded transition-colors">
+                <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">
                     Simpan
                 </button>
             </div>
@@ -96,32 +112,37 @@
     </div>
 </div>
 
-<!-- MODAL EDIT -->
-<div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg w-full max-w-md p-4 sm:p-6">
-        <h2 class="text-lg font-bold mb-4">Edit Kategori</h2>
+<div id="editModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[100] p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-blue-100 text-blue-600 p-3 rounded-full">
+                <i class="fas fa-edit text-xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">Edit Kategori</h2>
+        </div>
 
         <form id="editForm" method="POST">
-            <input 
-                type="text" 
-                name="name" 
-                id="editName"
-                required
-                class="w-full border p-2 rounded mb-4">
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Nama Kategori</label>
+                <input 
+                    type="text" 
+                    name="name" 
+                    id="editName"
+                    required
+                    class="w-full border-2 border-gray-200 p-3 rounded-xl focus:border-blue-500 outline-none transition">
+            </div>
 
-            <div class="flex flex-col sm:flex-row justify-end gap-2">
-                <button type="button" onclick="closeEditModal()" class="w-full sm:w-auto px-4 py-2 border rounded transition-colors">
+            <div class="flex gap-3">
+                <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">
                     Batal
                 </button>
-                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded transition-colors">
+                <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">
                     Update
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-<%- include('partials/footer') %>
 
 <script>
     const addModal = document.getElementById('addModal');
@@ -142,7 +163,6 @@
     function openEditModal(id, name) {
         editForm.action = `/admin/categories/edit/${id}`;
         editName.value = name;
-
         editModal.classList.remove('hidden');
         editModal.classList.add('flex');
     }
@@ -151,4 +171,31 @@
         editModal.classList.add('hidden');
         editModal.classList.remove('flex');
     }
+
+    // Fungsi Hapus dengan SweetAlert2 agar konsisten dengan List Book
+    function confirmDelete(id, name) {
+        Swal.fire({
+            title: 'Hapus Kategori?',
+            html: `Yakin ingin menghapus kategori <b>"${name}"</b>?<br><small class="text-red-500">Buku dengan kategori ini akan kehilangan relasi kategorinya.</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = `/admin/categories/delete/${id}`;
+            }
+        });
+    }
+
+    // Menutup modal jika klik di luar box modal
+    window.onclick = function(event) {
+        if (event.target == addModal) closeAddModal();
+        if (event.target == editModal) closeEditModal();
+    }
 </script>
+
+<%- include('partials/footer') %>

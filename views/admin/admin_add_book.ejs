@@ -2,6 +2,7 @@
 
 <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <h1 class="text-2xl font-bold mb-6">➕ Tambah Buku Baru</h1>
 
@@ -459,21 +460,51 @@
         updateShelfLocationDisplay(shelfLocationInput.value);
     }
 
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const shelf = document.getElementById('shelf_location').value;
-        if (!shelf) {
-            e.preventDefault();
-            Swal.fire('Peringatan', 'Silakan pilih Lokasi Rak melalui denah map!', 'warning');
-            return;
-        }
-        
-        // Validasi tambahan jika TomSelect tidak terdeteksi oleh required browser
-        const category = document.getElementById('category-select').value;
-        const subjects = document.getElementById('subject-select').value;
-        
-        if (!category || !subjects || subjects.length === 0) {
-            e.preventDefault();
-            Swal.fire('Peringatan', 'Mohon lengkapi Judul, Kategori, Subjek, dan Nomor Induk!', 'warning');
+    document.querySelector('form').addEventListener('submit', async function(e) {
+        e.preventDefault(); // Mencegah reload halaman
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        // 1. Tampilkan Loading agar Admin tahu proses sedang berjalan
+        Swal.fire({
+            title: 'Sedang menyimpan...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            // 2. Kirim data ke Controller menggunakan Fetch
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData // Mengirim data termasuk file gambar
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // 3. JIKA BERHASIL: Muncul notifikasi sukses lalu pindah halaman
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Buku baru telah ditambahkan.',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    window.location.href = result.redirectUrl;
+                });
+            } else {
+                // 4. JIKA GAGAL (DUPLIKAT): Munculkan pesan error dari Controller
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Menyimpan',
+                    text: result.message, // Ini akan berisi "Nomor Induk [xxx] sudah terdaftar..."
+                    confirmButtonColor: '#3b82f6'
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Terjadi kesalahan pada server atau jaringan.', 'error');
         }
     });
 </script>
