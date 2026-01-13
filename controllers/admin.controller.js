@@ -13,7 +13,9 @@ const EXCEL_COLUMNS = [
     { header: 'Bahasa', key: 'language', width: 15 },
     { header: 'Lokasi Rak*', key: 'shelf_location', width: 15 },
     { header: 'Kategori*', key: 'category', width: 20 },
-    { header: 'Pengarang (pisahkan dengan koma)', key: 'authors', width: 30 },
+    { header: 'Penulis*', key: 'authors_penulis', width: 30 },
+    { header: 'Editor', key: 'authors_editor', width: 30 },
+    { header: 'Penanggung Jawab', key: 'authors_pj', width: 30 },
     { header: 'Penerbit (pisahkan dengan koma)', key: 'publishers', width: 30 },
     { header: 'Subjek* (pisahkan dengan koma)', key: 'subjects', width: 30 },
     { header: 'Nomor Induk* (pisahkan dengan koma)', key: 'no_induk', width: 40 },
@@ -25,12 +27,10 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-// Helper function untuk download gambar
 const downloadImage = async (url, title) => {
     try {
         if (!url || !url.startsWith('http')) return null;
         
-        // Buat nama file aman dari judul buku
         const fileName = `${Date.now()}-${title.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 50)}.jpg`;
         const uploadPath = path.join(__dirname, '../public/image/uploads', fileName);
         
@@ -54,6 +54,33 @@ const downloadImage = async (url, title) => {
         return null;
     }
 };
+
+const processAuthorsWithRoles = async (bookId, inputNames, inputRoles, Author, BookAuthor) => {
+    if (!inputNames) return;
+
+    const names = Array.isArray(inputNames) ? inputNames : [inputNames];
+    const roles = Array.isArray(inputRoles) ? inputRoles : [inputRoles];
+
+    for (let i = 0; i < names.length; i++) {
+        let authorId;
+        const nameOrId = names[i];
+        if (!nameOrId) continue;
+
+        if (isNaN(nameOrId)) {
+            const [newAuthor] = await Author.findOrCreate({ where: { name: nameOrId.trim() } });
+            authorId = newAuthor.id;
+        } else {
+            authorId = nameOrId;
+        }
+
+        await BookAuthor.create({
+            book_id: bookId,
+            author_id: authorId,
+            role: roles[i] 
+        });
+    }
+};
+
 
 module.exports = {
     listBooks: async (req, res) => {
@@ -137,19 +164,22 @@ module.exports = {
                         book.shelf_location.trim() !== "" &&
                         book.shelf_location !== "-";
                     const hasCopies = book.copies && book.copies.length > 0;
+                    const hasIsbn = !!book.isbn && book.isbn.trim() !== "";
+                    const hasCallNumber = !!book.call_number && book.call_number.trim() !== "";
+                    const hasAuthors = book.Authors && book.Authors.length > 0;
+                    const hasPublishers = book.Publishers && book.Publishers.length > 0;
 
-                    return !hasCategory || !hasSubjects || !hasShelf || !hasCopies;
+                    return !hasCategory || !hasSubjects || !hasShelf || !hasCopies || !hasIsbn || !hasCallNumber || !hasAuthors || !hasPublishers;
                 });
             }
 
             let totalFilteredCopies = 0;
             if (q || category || subject || year) {
-                // Jika ada filter, hitung jumlah eksemplar dari buku yang terfilter saja
                 totalFilteredCopies = await BookCopy.count({
                     include: [{
                         model: Book,
                         where: whereCondition,
-                        include: includeOptions.filter(opt => opt.model !== BookCopy), // Hindari circular include
+                        include: includeOptions.filter(opt => opt.model !== BookCopy), 
                         required: true
                     }]
                 });
@@ -204,41 +234,30 @@ module.exports = {
 
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Data Buku');
-
-            // KOLOM DISAMAKAN DENGAN TEMPLATE
-            worksheet.columns = [
-                { header: 'Judul Buku*', key: 'title', width: 30 },
-                { header: 'Edisi', key: 'edition', width: 10 },
-                { header: 'Tahun Terbit', key: 'publish_year', width: 12 },
-                { header: 'Tempat Terbit', key: 'publish_place', width: 20 },
-                { header: 'Deskripsi Fisik', key: 'physical_description', width: 25 },
-                { header: 'ISBN', key: 'isbn', width: 20 },
-                { header: 'No Panggil', key: 'call_number', width: 15 },
-                { header: 'Bahasa', key: 'language', width: 15 },
-                { header: 'Lokasi Rak', key: 'shelf_location', width: 15 },
-                { header: 'Kategori', key: 'category', width: 20 },
-                { header: 'Pengarang (pisahkan dengan koma)', key: 'authors', width: 30 },
-                { header: 'Penerbit (pisahkan dengan koma)', key: 'publishers', width: 30 },
-                { header: 'Subjek (pisahkan dengan koma)', key: 'subjects', width: 30 },
-                { header: 'Nomor Induk (pisahkan dengan koma)', key: 'no_induk', width: 40 },
-                { header: 'Catatan', key: 'notes', width: 30 },
-                { header: 'Abstrak', key: 'abstract', width: 50 },
-                { header: 'Gambar', key: 'image', width: 30 }
-            ];
+            worksheet.columns = EXCEL_COLUMNS;
 
             books.forEach(book => {
-                worksheet.addRow({
-                    title: book.title,
-                    edition: book.edition,
-                    publish_year: book.publish_year,
-                    publish_place: book.publish_place,
-                    physical_description: book.physical_description,
-                    isbn: book.isbn,
-                    call_number: book.call_number,
-                    language: book.language,
-                    shelf_location: book.shelf_location,
-                    category: book.Category ? book.Category.name : '',
-                    authors: book.Authors ? book.Authors.map(a => a.name).join(', ') : '',
+            // Fungsi helper untuk ambil nama berdasarkan role
+            const getNamesByRole = (role) => {
+                return book.Authors 
+                    ? book.Authors.filter(a => a.BookAuthor.role === role).map(a => a.name).join(', ') 
+                    : '';
+            };
+
+            worksheet.addRow({
+                title: book.title,
+                edition: book.edition,
+                publish_year: book.publish_year,
+                publish_place: book.publish_place,
+                physical_description: book.physical_description,
+                isbn: book.isbn,
+                call_number: book.call_number,
+                language: book.language,
+                shelf_location: book.shelf_location,
+                category: book.Category ? book.Category.name : '',
+                authors_penulis: getNamesByRole('penulis'),
+                authors_editor: getNamesByRole('editor'),
+                authors_pj: getNamesByRole('penanggung jawab'),
                     publishers: book.Publishers ? book.Publishers.map(p => p.name).join(', ') : '',
                     subjects: book.Subjects ? book.Subjects.map(s => s.name).join(', ') : '',
                     no_induk: book.copies ? book.copies.map(c => c.no_induk).join(', ') : '',
@@ -263,25 +282,7 @@ module.exports = {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Template Import Buku');
 
-            worksheet.columns = [
-                { header: 'Judul Buku*', key: 'title', width: 30 },
-                { header: 'Edisi', key: 'edition', width: 10 },
-                { header: 'Tahun Terbit', key: 'publish_year', width: 12 },
-                { header: 'Tempat Terbit', key: 'publish_place', width: 20 },
-                { header: 'Deskripsi Fisik', key: 'physical_description', width: 25 },
-                { header: 'ISBN', key: 'isbn', width: 20 },
-                { header: 'No Panggil', key: 'call_number', width: 15 },
-                { header: 'Bahasa', key: 'language', width: 15 },
-                { header: 'Lokasi Rak', key: 'shelf_location', width: 15 },
-                { header: 'Kategori', key: 'category', width: 20 },
-                { header: 'Pengarang (pisahkan dengan koma)', key: 'authors', width: 30 },
-                { header: 'Penerbit (pisahkan dengan koma)', key: 'publishers', width: 30 },
-                { header: 'Subjek (pisahkan dengan koma)', key: 'subjects', width: 30 },
-                { header: 'Nomor Induk (pisahkan dengan koma)', key: 'no_induk', width: 40 },
-                { header: 'Catatan', key: 'notes', width: 30 },
-                { header: 'Abstrak', key: 'abstract', width: 50 },
-                { header: 'URL Gambar / Nama File (Contoh: https://link.com/f.jpg ATAU buku1.jpg)', key: 'imageUrl', width: 50 }
-            ];
+            worksheet.columns = EXCEL_COLUMNS;
 
             worksheet.addRow({ title: 'Contoh Judul Buku', category: 'Fiksi', authors: 'Penulis A, Penulis B', no_induk: 'B001, B002',imageUrl: 'https://upload.wikimedia.org/wikipedia/id/8/8e/Laskar_pelangi_sampul.jpg' });
 
@@ -296,6 +297,8 @@ module.exports = {
 
     importExcel: async (req, res) => {
         try {
+            const { Book, Category, Author, Publisher, Subject, BookCopy, BookAuthor } = require("../models");
+            
             if (!req.file) return res.status(400).send("Tidak ada file yang diunggah");
 
             const workbook = new ExcelJS.Workbook();
@@ -319,13 +322,17 @@ module.exports = {
                     language: row.getCell(8).text,
                     shelf_location: row.getCell(9).text,
                     categoryName: row.getCell(10).text,
-                    authors: row.getCell(11).text,
-                    publishers: row.getCell(12).text,
-                    subjects: row.getCell(13).text,
-                    noInduk: row.getCell(14).text,
-                    notes: row.getCell(15).text,
-                    abstract: row.getCell(16).text,
-                    imageInput: row.getCell(17).text.trim() // Nama file atau URL
+                    // --- URUTAN BARU ---
+                    authorsPenulis: row.getCell(11).text, // Kolom Penulis
+                    authorsEditor: row.getCell(12).text,  // Kolom Editor
+                    authorsPJ: row.getCell(13).text,      // Kolom PJ
+                    // Kolom sisanya bergeser (+2 dari sebelumnya)
+                    publishers: row.getCell(14).text,
+                    subjects: row.getCell(15).text,
+                    noInduk: row.getCell(16).text,
+                    notes: row.getCell(17).text,
+                    abstract: row.getCell(18).text,
+                    imageInput: row.getCell(19).text.trim()
                 });
             });
 
@@ -334,18 +341,14 @@ module.exports = {
 
                 let book = await Book.findOne({ where: { title: data.title } });
                 
-                // --- LOGIKA PENENTUAN GAMBAR ---
+                // --- LOGIKA GAMBAR ---
                 let finalImageName = null;
                 if (data.imageInput) {
                     if (data.imageInput.startsWith('http')) {
-                        // Jika URL, download
                         finalImageName = await downloadImage(data.imageInput, data.title);
                     } else {
-                        // Jika Nama File, cek apakah filenya ada di folder uploads
                         const checkPath = path.join(__dirname, '../public/image/uploads', data.imageInput);
-                        if (fs.existsSync(checkPath)) {
-                            finalImageName = data.imageInput;
-                        }
+                        if (fs.existsSync(checkPath)) finalImageName = data.imageInput;
                     }
                 }
 
@@ -374,25 +377,15 @@ module.exports = {
                     // --- LENGKAPI DATA ---
                     const updateData = {};
                     const fields = ['edition', 'publish_year', 'publish_place', 'physical_description', 'isbn', 'call_number', 'language', 'shelf_location', 'notes', 'abstract'];
-                    
                     fields.forEach(f => {
-                        if ((!book[f] || book[f] === '-' || book[f] === '') && data[f]) {
-                            updateData[f] = data[f];
-                        }
+                        if ((!book[f] || book[f] === '-' || book[f] === '') && data[f]) updateData[f] = data[f];
                     });
-
-                    // Update gambar jika di database masih kosong
-                    if ((!book.image || book.image === '') && finalImageName) {
-                        updateData.image = finalImageName;
-                    }
-
-                    if (Object.keys(updateData).length > 0) {
-                        await book.update(updateData);
-                    }
+                    if ((!book.image || book.image === '') && finalImageName) updateData.image = finalImageName;
+                    if (Object.keys(updateData).length > 0) await book.update(updateData);
                     existingCount++;
                 }
 
-                // --- LOGIKA NOMOR INDUK (Selalu diproses) ---
+                // --- LOGIKA NOMOR INDUK ---
                 if (data.noInduk) {
                     const nos = data.noInduk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
                     for (const n of nos) {
@@ -405,26 +398,42 @@ module.exports = {
                     await book.update({ stock_total: countTotal });
                 }
 
-                // --- LOGIKA RELASI (Lengkapi data relasi) ---
+                // --- LOGIKA RELASI AUTHOR DENGAN ROLE (3 KOLOM) ---
+                const importAuthorWithRole = async (input, roleName) => {
+                    if (!input) return;
+                    const names = String(input).split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
+                    for (const name of names) {
+                        const [authObj] = await Author.findOrCreate({ where: { name } });
+                        // findOrCreate di BookAuthor agar tidak duplikat jika import ulang
+                        await BookAuthor.findOrCreate({
+                            where: { 
+                                book_id: book.id, 
+                                author_id: authObj.id, 
+                                role: roleName 
+                            }
+                        });
+                    }
+                };
+
+                await importAuthorWithRole(data.authorsPenulis, 'penulis');
+                await importAuthorWithRole(data.authorsEditor, 'editor');
+                await importAuthorWithRole(data.authorsPJ, 'penanggung jawab');
+
+                // --- LOGIKA RELASI PUBLISHER & SUBJECT ---
                 const processRel = async (bookObj, input, Model, getter, setter) => {
                     if (!input) return;
                     const names = String(input).split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
-                    
                     const currentItems = await bookObj[getter]();
                     const existingIds = currentItems.map(item => item.id);
-                    
                     const newIds = [];
                     for (const name of names) {
                         const [obj] = await Model.findOrCreate({ where: { name } });
                         newIds.push(obj.id);
                     }
-
-                    // Gabungkan ID lama dan baru agar tidak duplikat (Set)
                     const finalIds = [...new Set([...existingIds, ...newIds])];
                     await bookObj[setter](finalIds);
                 };
 
-                await processRel(book, data.authors, Author, 'getAuthors', 'setAuthors');
                 await processRel(book, data.publishers, Publisher, 'getPublishers', 'setPublishers');
                 await processRel(book, data.subjects, Subject, 'getSubjects', 'setSubjects');
             }
@@ -502,74 +511,20 @@ module.exports = {
     addBook: async (req, res) => {
         try {
             const data = req.body;
+            const { BookAuthor, Author, Category, Subject, Book, BookCopy, Publisher } = require("../models");
 
-            if (!data.title || !data.category_id || !data.subjects || !data.shelf_location || !data.no_induk) {
-                return res.status(400).send("Gagal: Judul, Kategori, Subjek, Lokasi Rak, dan Nomor Induk wajib diisi!");
+            if (!data.title || !data.category_id || !data.subjects || !data.shelf_location || !data.no_induk|| !data.isbn || !data.call_number || !data.publishers || !data.authors_penulis) {
+                return res.status(400).json({ success: false, message: "Judul, Kategori, Subjek, Lokasi Rak, dan Nomor Induk, ISBN, Call Number, Penerbit, dan Penulis wajib diisi!" });
             }
 
-            // 1. Logika Kategori (Tetap sama)
-            let categoryId = null;
-            if (data.category_id) {
-                const cat = Array.isArray(data.category_id) ? data.category_id[0] : data.category_id;
-                if (isNaN(cat)) {
-                    const newCategory = await Category.create({ name: String(cat) });
-                    categoryId = newCategory.id;
-                } else {
-                    categoryId = cat;
-                }
+            // 1. Logika Kategori (Gunakan findOrCreate agar aman)
+            let categoryId = data.category_id;
+            if (isNaN(categoryId)) {
+                const [newCategory] = await Category.findOrCreate({ where: { name: String(categoryId).trim() } });
+                categoryId = newCategory.id;
             }
 
-            // =====================
-            // AUTHORS
-            // =====================
-            let authorIds = [];
-            if (data.authors) {
-                const authorsArray = Array.isArray(data.authors) ? data.authors : [data.authors];
-                for (const a of authorsArray) {
-                    if (isNaN(a)) {
-                        const newAuthor = await Author.create({ name: String(a) });
-                        authorIds.push(newAuthor.id);
-                    } else {
-                        authorIds.push(a);
-                    }
-                }
-            }
-
-            // =====================
-            // PUBLISHERS
-            // =====================
-            let publisherIds = [];
-            if (data.publishers) {
-                const publishersArray = Array.isArray(data.publishers) ? data.publishers : [data.publishers];
-                for (const p of publishersArray) {
-                    if (isNaN(p)) {
-                        const newPublisher = await Publisher.create({ name: String(p) });
-                        publisherIds.push(newPublisher.id);
-                    } else {
-                        publisherIds.push(p);
-                    }
-                }
-            }
-
-            // =====================
-            // SUBJECTS
-            // =====================
-            let subjectIds = [];
-            if (data.subjects) {
-                const subjectsArray = Array.isArray(data.subjects) ? data.subjects : [data.subjects];
-                for (const s of subjectsArray) {
-                    if (isNaN(s)) {
-                        const newSubject = await Subject.create({ name: String(s) });
-                        subjectIds.push(newSubject.id);
-                    } else {
-                        subjectIds.push(s);
-                    }
-                }
-            }
-
-            // =====================
-            // CREATE BOOK (FINAL)
-            // =====================
+            // 2. CREATE BUKU DULU (PENTING: Variabel 'book' harus dibuat dulu)
             const book = await Book.create({
                 title: data.title,
                 edition: data.edition,
@@ -586,9 +541,35 @@ module.exports = {
                 image: req.file ? req.file.filename : null
             });
 
+            // 3. BARU PROSES ROLE (Sekarang variabel 'book' sudah ada)
+            const processRole = async (input, roleName) => {
+                if (!input) return;
+                const names = Array.isArray(input) ? input : [input];
+                for (const nameOrId of names) {
+                    if (!nameOrId) continue;
+                    let authorId;
+                    if (isNaN(nameOrId)) {
+                        const [newAuthor] = await Author.findOrCreate({ where: { name: nameOrId.trim() } });
+                        authorId = newAuthor.id;
+                    } else {
+                        authorId = nameOrId;
+                    }
+                    // Sekarang variabel 'book.id' sudah bisa diakses
+                    await BookAuthor.create({
+                        book_id: book.id,
+                        author_id: authorId,
+                        role: roleName
+                    });
+                }
+            };
+
+            await processRole(data.authors_penulis, 'penulis');
+            await processRole(data.authors_editor, 'editor');
+            await processRole(data.authors_pj, 'penanggung jawab');
+
+            // 4. Logika Nomor Induk (tetap sama)
             if (data.no_induk) {
                 const noIndukArray = data.no_induk.split(/[\n,]+/).map(item => item.trim()).filter(item => item !== "");
-
                 if (noIndukArray.length > 0) {
                     const existingCopies = await BookCopy.findAll({
                         where: { no_induk: { [Op.in]: noIndukArray } }
@@ -596,12 +577,10 @@ module.exports = {
 
                     if (existingCopies.length > 0) {
                         const duplicateNumbers = existingCopies.map(c => c.no_induk).join(', ');
-                        
-                        await book.destroy(); 
-
+                        await book.destroy(); // Hapus buku yang baru dibuat karena nomor induk duplikat
                         return res.status(400).json({ 
                             success: false, 
-                            message: `Nomor Induk [${duplicateNumbers}] sudah terdaftar untuk buku lain!` 
+                            message: `Nomor Induk [${duplicateNumbers}] sudah terdaftar!` 
                         });
                     }
 
@@ -616,9 +595,32 @@ module.exports = {
                 }
             }
 
-            if (authorIds.length) await book.setAuthors(authorIds);
-            if (publisherIds.length) await book.setPublishers(publisherIds);
-            if (subjectIds.length) await book.setSubjects(subjectIds);
+            // 5. Logika Publishers & Subjects (Gunakan findOrCreate)
+            if (data.publishers) {
+                const pubArray = Array.isArray(data.publishers) ? data.publishers : [data.publishers];
+                const pubIds = [];
+                for (const p of pubArray) {
+                    if (!p) continue;
+                    const [pub] = isNaN(p) 
+                        ? await Publisher.findOrCreate({ where: { name: p.trim() } }) 
+                        : [{ id: p }];
+                    pubIds.push(pub.id);
+                }
+                await book.setPublishers(pubIds);
+            }
+
+            if (data.subjects) {
+                const subArray = Array.isArray(data.subjects) ? data.subjects : [data.subjects];
+                const subIds = [];
+                for (const s of subArray) {
+                    if (!s) continue;
+                    const [sub] = isNaN(s) 
+                        ? await Subject.findOrCreate({ where: { name: s.trim() } }) 
+                        : [{ id: s }];
+                    subIds.push(sub.id);
+                }
+                await book.setSubjects(subIds);
+            }
 
             return res.status(200).json({ success: true, redirectUrl: "/admin/books?addSuccess=1" });
 
@@ -628,9 +630,6 @@ module.exports = {
         }
     },
 
-    // =========================
-    // SHOW HALAMAN EDIT BUKU
-    // =========================
     showEditPage: async (req, res) => {
         try {
             const book = await Book.findByPk(req.params.id, {
@@ -670,17 +669,17 @@ module.exports = {
     // =========================
    updateBook: async (req, res) => {
         try {
+            const { BookAuthor, Author, Category, Subject, Book, BookCopy, Publisher } = require("../models");
             const book = await Book.findByPk(req.params.id);
             if (!book) return res.status(404).json({ success: false, message: "Buku tidak ditemukan" });
 
             const data = req.body;
 
             // 1. Validasi Required
-            if (!data.title || !data.category_id || !data.subjects || !data.shelf_location || !data.no_induk) {
-                return res.status(400).json({ success: false, message: "Gagal: Data wajib tidak boleh kosong!" });
+            if (!data.title || !data.category_id || !data.shelf_location || !data.no_induk|| !data.isbn || !data.call_number || !data.publishers || !data.authors_penulis) {
+                return res.status(400).json({ success: false, message: "Gagal: Judul, Kategori, Lokasi, dan Nomor Induk, ISBN, Call Number, Penerbit, dan Penulis wajib diisi!" });
             }
 
-            // Simpan parameter origin untuk redirect balik ke filter asal
             const queryParams = new URLSearchParams({
                 q: data.origin_q || "",
                 searchBy: data.origin_searchBy || "title",
@@ -691,32 +690,14 @@ module.exports = {
                 page: data.origin_page || "1"
             });
 
-            // 2. VALIDASI NOMOR INDUK (Cek apakah nomor induk sudah dipakai buku lain)
-            const noIndukArray = data.no_induk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
-            if (noIndukArray.length > 0) {
-                const duplicateInOtherBook = await BookCopy.findOne({
-                    where: {
-                        no_induk: { [Op.in]: noIndukArray },
-                        book_id: { [Op.ne]: book.id } // Kecualikan buku yang sedang diedit ini
-                    }
-                });
-
-                if (duplicateInOtherBook) {
-                    return res.status(400).json({ 
-                        success: false, 
-                        message: `Gagal: Nomor Induk [${duplicateInOtherBook.no_induk}] sudah terdaftar untuk buku lain!` 
-                    });
-                }
-            }
-
-            // 3. Update Kategori (Jika input baru/string)
+            // 2. Update Kategori
             let categoryId = data.category_id;
             if (isNaN(categoryId)) {
-                const [newCategory] = await Category.findOrCreate({ where: { name: categoryId } });
+                const [newCategory] = await Category.findOrCreate({ where: { name: String(categoryId).trim() } });
                 categoryId = newCategory.id;
             }
 
-            // 4. Update Data Utama
+            // 3. Update Data Utama Buku
             await book.update({
                 title: data.title,
                 edition: data.edition,
@@ -732,39 +713,69 @@ module.exports = {
                 category_id: categoryId
             });
 
-            // 5. Update Nomor Induk (Hapus lama, Insert baru)
-            await BookCopy.destroy({ where: { book_id: book.id } });
-            const copyData = noIndukArray.map(nomor => ({
-                book_id: book.id,
-                no_induk: nomor,
-                status: 'tersedia'
-            }));
-            await BookCopy.bulkCreate(copyData);
-            await book.update({ stock_total: noIndukArray.length });
+            // 4. PROSES ULANG AUTHORS (Hapus Lama, Insert Baru)
+            await BookAuthor.destroy({ where: { book_id: book.id } });
 
-            // 6. Update Relasi (Authors, Publishers, Subjects)
-            // Logika findOrCreate untuk Author
-            const authorIds = [];
-            if (data.authors) {
-                const authorsArray = Array.isArray(data.authors) ? data.authors : [data.authors];
-                for (const a of authorsArray) {
-                    if (isNaN(a)) {
-                        const [newAuthor] = await Author.findOrCreate({ where: { name: a } });
-                        authorIds.push(newAuthor.id);
-                    } else { authorIds.push(a); }
+            const processRole = async (input, roleName) => {
+                if (!input) return;
+                const names = Array.isArray(input) ? input : [input];
+                for (const item of names) {
+                    if (!item) continue;
+                    let authorId;
+                    if (isNaN(item)) {
+                        const [newAuth] = await Author.findOrCreate({ where: { name: item.trim() } });
+                        authorId = newAuth.id;
+                    } else {
+                        authorId = item;
+                    }
+                    await BookAuthor.create({ book_id: book.id, author_id: authorId, role: roleName });
                 }
+            };
+
+            await processRole(data.authors_penulis, 'penulis');
+            await processRole(data.authors_editor, 'editor');
+            await processRole(data.authors_pj, 'penanggung jawab');
+
+            // 5. Update Nomor Induk (tetap sama)
+            if (data.no_induk) {
+                const noIndukArray = data.no_induk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
+                const existingCopies = await BookCopy.findAll({
+                    where: { no_induk: { [Op.in]: noIndukArray }, book_id: { [Op.ne]: book.id } }
+                });
+
+                if (existingCopies.length > 0) {
+                    return res.status(400).json({ success: false, message: `Nomor Induk [${existingCopies.map(c => c.no_induk).join(', ')}] sudah terdaftar!` });
+                }
+
+                await BookCopy.destroy({ where: { book_id: book.id } });
+                await BookCopy.bulkCreate(noIndukArray.map(n => ({ book_id: book.id, no_induk: n, status: 'tersedia' })));
+                await book.update({ stock_total: noIndukArray.length });
             }
-            await book.setAuthors(authorIds);
 
-            // Ulangi logika isNaN untuk Publisher & Subject jika perlu, atau set langsung:
-            if (data.publishers) await book.setPublishers(data.publishers);
-            if (data.subjects) await book.setSubjects(data.subjects);
+            // 6. Update Relasi Lainnya (Publisher & Subject)
+            if (data.publishers) {
+                const pubIds = [];
+                const pubs = Array.isArray(data.publishers) ? data.publishers : [data.publishers];
+                for (const p of pubs) {
+                    if (!p) continue;
+                    const [pub] = isNaN(p) ? await Publisher.findOrCreate({ where: { name: p.trim() } }) : [{ id: p }];
+                    pubIds.push(pub.id);
+                }
+                await book.setPublishers(pubIds);
+            }
 
-            // 7. Respon Sukses dalam format JSON
-            return res.status(200).json({ 
-                success: true, 
-                redirectUrl: `/admin/books?${queryParams.toString()}&updateSuccess=1` 
-            });
+            if (data.subjects) {
+                const subIds = [];
+                const subs = Array.isArray(data.subjects) ? data.subjects : [data.subjects];
+                for (const s of subs) {
+                    if (!s) continue;
+                    const [sub] = isNaN(s) ? await Subject.findOrCreate({ where: { name: s.trim() } }) : [{ id: s }];
+                    subIds.push(sub.id);
+                }
+                await book.setSubjects(subIds);
+            }
+
+            return res.status(200).json({ success: true, redirectUrl: `/admin/books?${queryParams.toString()}&updateSuccess=1` });
 
         } catch (err) {
             console.error(err);

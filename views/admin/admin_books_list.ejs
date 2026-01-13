@@ -226,8 +226,8 @@
                 <th class="p-2 sm:p-4 w-16">No</th>
                 <th class="p-2 sm:p-4 hidden sm:table-cell w-24">Gambar</th>
                 <th class="p-2 sm:p-4">Judul</th>
-                <th class="p-2 sm:p-4 hidden md:table-cell">Status Data</th>
-                <th class="p-2 sm:p-4 hidden lg:table-cell">Kategori</th>
+                <th class="p-2 sm:p-4 w-38 text-center">Status Data</th>
+                <th class="p-2 sm:p-4 w-38 text-center">Kategori</th>
                 <th class="p-2 sm:p-4 w-32 text-center">Aksi</th>
             </tr>
         </thead>
@@ -236,37 +236,52 @@
                 <tr><td colspan="6" class="p-4 text-center text-gray-500">Belum ada buku.</td></tr>
             <% } else { %>
                 <% books.forEach((book, index) => { 
+                    // 1. Logika Pengecekan Kelengkapan (Disinkronkan dengan aturan baru)
                     const hasCategory = !!book.Category;
                     const hasSubjects = book.Subjects && book.Subjects.length > 0;
                     const hasShelf = !!book.shelf_location && book.shelf_location.trim() !== "" && book.shelf_location !== "-";
                     const hasCopies = book.copies && book.copies.length > 0;
-                    const isIncomplete = !hasCategory || !hasSubjects || !hasShelf || !hasCopies;
+                    const hasIsbn = !!book.isbn && book.isbn.trim() !== "";
+                    const hasCallNumber = !!book.call_number && book.call_number.trim() !== "";
+                    
+                    // Cek Penulis (Penulis Utama wajib ada)
+                    const hasAuthors = book.Authors && book.Authors.some(ba => ba.BookAuthor && ba.BookAuthor.role === 'penulis');
+                    const hasPublishers = book.Publishers && book.Publishers.length > 0;
+
+                    // Menggunakan nama variabel unik agar tidak deklarasi ulang
+                    const bookStatusIncomplete = !hasCategory || !hasSubjects || !hasShelf || !hasCopies || !hasIsbn || !hasCallNumber || !hasAuthors || !hasPublishers;
                 %>
-                <tr class="border-t hover:bg-gray-50 book-row <%= isIncomplete ? 'is-incomplete' : '' %>">
+                <tr class="border-t hover:bg-gray-50 book-row <%= bookStatusIncomplete ? 'is-incomplete' : '' %>">
                     <td class="p-2 sm:p-4">
                         <input type="checkbox" name="bookIds" value="<%= book.id %>" class="delete-checkbox hidden cursor-pointer" onchange="updateBulkPanel()">
                         <span><%= (currentPage - 1) * limit + index + 1 %></span>
                     </td>
                     <td class="p-2 sm:p-4 hidden sm:table-cell">
                         <div class="w-12 h-16 border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden mx-auto">
-                            <% if (book.image) { %><img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
-                            <% } else { %><div class="text-center text-gray-400 text-[8px] font-bold">NO COVER</div><% } %>
+                            <% if (book.image) { %>
+                                <img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
+                            <% } else { %>
+                                <div class="text-center text-gray-400 text-[8px] font-bold">NO COVER</div>
+                            <% } %>
                         </div>
                     </td>
                     <td class="p-2 sm:p-4 font-medium">
-                        <div class="font-semibold"><%= book.title %></div>
+                        <div class="font-semibold text-gray-800"><%= book.title %></div>
                     </td>
                     
-                    <td class="p-2 sm:p-4 text-sm hidden md:table-cell text-center"> <% if (isIncomplete) { %>
-                            <span class="bg-yellow-400 text-white text-[10px] px-2 py-1 rounded font-bold uppercase whitespace-nowrap">
+                    <td class="p-2 sm:p-4 text-sm hidden md:table-cell text-center"> 
+                        <% if (bookStatusIncomplete) { %>
+                            <span class="bg-yellow-400 text-white text-[10px] px-2 py-1 rounded font-bold uppercase whitespace-nowrap shadow-sm">
                                 Data Required Tidak Lengkap
                             </span>
                         <% } else { %>
-                            <span class="text-gray-400 font-bold">-</span>
+                            <span class="text-green-500 font-bold text-xs"><i class="fas fa-check-circle"></i> Lengkap</span>
                         <% } %>
                     </td>
 
-                    <td class="p-2 sm:p-4 text-sm hidden lg:table-cell"><%= book.Category ? book.Category.name : '-' %></td>
+                    <td class="p-2 sm:p-4 text-sm hidden lg:table-cell text-gray-600">
+                        <%= book.Category ? book.Category.name : '-' %>
+                    </td>
                     
                     <td class="p-2 sm:p-4 text-center">
                         <div class="flex justify-center gap-2">
@@ -280,11 +295,6 @@
                                     data-id="<%= book.id %>"
                                     data-title="<%= book.title %>"
                                     data-q="<%= query.q || '' %>"
-                                    data-searchby="<%= query.searchBy || 'title' %>"
-                                    data-matchtype="<%= query.matchType || 'contains' %>"
-                                    data-category="<%= query.category || '' %>"
-                                    data-subject="<%= query.subject || '' %>"
-                                    data-year="<%= query.year || '' %>"
                                     data-page="<%= currentPage %>">
                                 <i class="fas fa-trash"></i>
                             </button>

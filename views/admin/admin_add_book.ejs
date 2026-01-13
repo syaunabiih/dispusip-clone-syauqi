@@ -44,13 +44,13 @@
             </div>
 
             <div>
-                <label class="font-medium">ISBN</label>
-                <input type="text" name="isbn" class="w-full p-2 border rounded">
+                <label class="font-medium">ISBN <span class="text-red-500">*</span></label>
+                <input type="text" name="isbn" value="<%= typeof book !== 'undefined' ? book.isbn : '' %>" required class="w-full p-2 border rounded">
             </div>
 
             <div>
-                <label class="font-medium">Call Number</label>
-                <input type="text" name="call_number" class="w-full p-2 border rounded">
+                <label class="font-medium">Call Number <span class="text-red-500">*</span></label>
+                <input type="text" name="call_number" value="<%= typeof book !== 'undefined' ? book.call_number : '' %>" required class="w-full p-2 border rounded">
             </div>
         </div>
     </div>
@@ -69,8 +69,28 @@
     <!-- AUTHOR & PUBLISHER -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div>
-            <label class="font-medium">Penulis</label>
-            <select name="authors[]" id="author-select" class="w-full p-2 border rounded" multiple>
+            <label class="font-medium">Penulis <span class="text-red-500">*</span></label>
+            <select name="authors_penulis[]" id="penulis-select" class="w-full p-2 border rounded" multiple required>
+                <% authors.forEach(a => { %>
+                    <option value="<%= a.id %>"><%= a.name %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div>
+            <label class="font-medium">Editor</label>
+            <select name="authors_editor[]" id="editor-select" class="w-full p-2 border rounded" multiple>
+                <% authors.forEach(a => { %>
+                    <option value="<%= a.id %>"><%= a.name %></option>
+                <% }) %>
+            </select>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4">
+        <div>
+            <label class="font-medium">Penanggung Jawab</label>
+            <select name="authors_pj[]" id="pj-select" class="w-full p-2 border rounded" multiple>
                 <% authors.forEach(a => { %>
                     <option value="<%= a.id %>"><%= a.name %></option>
                 <% }) %>
@@ -79,7 +99,7 @@
 
         <div>
             <label class="font-medium">Penerbit</label>
-            <select name="publishers[]" id="publisher-select" class="w-full p-2 border rounded" multiple>
+            <select name="publishers[]" id="publisher-select" class="w-full p-2 border rounded" multiple required>
                 <% publishers.forEach(p => { %>
                     <option value="<%= p.id %>"><%= p.name %></option>
                 <% }) %>
@@ -263,7 +283,9 @@
     }
 
     initTomSelect("#category-select", "Cari atau tambah kategori...", false);
-    initTomSelect("#author-select", "Cari atau tambah penulis...");
+    initTomSelect("#penulis-select", "Cari/tambah penulis...");
+    initTomSelect("#editor-select", "Cari/tambah editor...");
+    initTomSelect("#pj-select", "Cari/tambah penanggung jawab...");
     initTomSelect("#subject-select", "Cari atau tambah subjek...");
     initTomSelect("#publisher-select", "Cari atau tambah penerbit...");
 
