@@ -9,6 +9,36 @@
     min-width: 0;
 }
 
+/* Responsive utilities */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Mobile card improvements */
+@media (max-width: 768px) {
+    .book-row {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .book-row:active {
+        transform: scale(0.98);
+    }
+    
+    .book-row.is-incomplete {
+        border-left: 4px solid #fbbf24;
+    }
+}
+
 @media print {
     body * {
         visibility: hidden;
