@@ -28,27 +28,119 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
+
+// Fungsi helper untuk cleanup gambar yang tidak digunakan
+const cleanupUnusedImage = async (imageFilename) => {
+    try {
+        if (!imageFilename) return;
+        
+        // Cek apakah gambar masih digunakan oleh buku lain
+        const booksUsingImage = await Book.count({
+            where: { image: imageFilename }
+        });
+        
+        if (booksUsingImage === 0) {
+            // Tidak ada buku yang menggunakan gambar ini, hapus file
+            const filePath = path.join(__dirname, '../public/image/uploads', imageFilename);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            
+        }
+    } catch (error) {
+        console.error("Error cleaning up image:", error);
+    }
+};
+
+// Fungsi untuk normalisasi URL (trim, decode, hapus trailing slash)
+const normalizeUrl = (url) => {
+    if (!url) return null;
+    let normalized = url.trim();
+    
+    // Decode URL encoding (misal %20 menjadi space, dll)
+    try {
+        normalized = decodeURIComponent(normalized);
+    } catch (e) {
+        // Jika decode gagal, gunakan URL asli
+    }
+    
+    // Hapus trailing slash kecuali untuk root domain (http://example.com/)
+    normalized = normalized.replace(/\/(?=\?|#|$)/, '');
+    
+    // Hapus multiple spaces
+    normalized = normalized.replace(/\s+/g, ' ');
+    
+    // Hapus whitespace di awal dan akhir
+    normalized = normalized.trim();
+    
+    return normalized;
+};
+
 const downloadImage = async (url, title) => {
     try {
         if (!url || !url.startsWith('http')) return null;
         
-        const fileName = `${Date.now()}-${title.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 50)}.jpg`;
-        const uploadPath = path.join(__dirname, '../public/image/uploads', fileName);
+        // Normalisasi URL untuk konsistensi
+        const normalizedUrl = normalizeUrl(url);
         
-        const response = await axios({
-            url,
-            method: 'GET',
-            responseType: 'stream'
-        });
+        // Pastikan folder uploads ada
+        const uploadsDir = path.join(__dirname, '../public/image/uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
+        console.log(`[DOWNLOAD IMAGE] Memproses gambar untuk: "${title}"`);
+        console.log(`  URL: "${normalizedUrl}"`);
+        
+        // URL belum pernah diunduh atau file hilang, lakukan download
+        const fileName = `${Date.now()}-${title.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 50)}.jpg`;
+        const uploadPath = path.join(uploadsDir, fileName);
+        
+        let response;
+        try {
+            response = await axios({
+                url,
+                method: 'GET',
+                responseType: 'stream',
+                timeout: 30000, // 30 detik timeout
+                validateStatus: function (status) {
+                    return status >= 200 && status < 300; // Hanya terima status 2xx
+                }
+            });
+        } catch (axiosError) {
+            console.error(`Error fetching image from URL ${url}:`, axiosError.message);
+            return null;
+        }
 
         return new Promise((resolve, reject) => {
             const writer = fs.createWriteStream(uploadPath);
-            response.data.pipe(writer);
-            writer.on('finish', () => resolve(fileName));
+            
+            writer.on('finish', () => {
+                console.log(`✓ Gambar berhasil diunduh: ${fileName}`);
+                resolve(fileName);
+            });
+            
             writer.on('error', (err) => {
-                console.error("Download Error:", err);
+                console.error("File Write Error:", err);
+                // Hapus file yang tidak lengkap jika ada
+                try {
+                    if (fs.existsSync(uploadPath)) {
+                        fs.unlinkSync(uploadPath);
+                    }
+                } catch (unlinkErr) {
+                    console.error("Error deleting incomplete file:", unlinkErr);
+                }
                 resolve(null);
             });
+            
+            response.data.on('error', (err) => {
+                console.error("Response Stream Error:", err);
+                writer.end();
+                resolve(null);
+            });
+            
+            // Pipe response ke file
+            response.data.pipe(writer);
         });
     } catch (error) {
         console.error("URL Image Error:", error.message);
@@ -310,6 +402,10 @@ module.exports = {
         try {
             const { Book, Category, Author, Publisher, Subject, BookCopy, BookAuthor } = require("../models");
             
+            console.log(`\n${'='.repeat(60)}`);
+            console.log(`[IMPORT EXCEL] Memulai proses import...`);
+            console.log(`${'='.repeat(60)}\n`);
+            
             if (!req.file) return res.status(400).send("Tidak ada file yang diunggah");
 
             const workbook = new ExcelJS.Workbook();
@@ -356,7 +452,14 @@ module.exports = {
                 let finalImageName = null;
                 if (data.imageInput) {
                     if (data.imageInput.startsWith('http')) {
-                        finalImageName = await downloadImage(data.imageInput, data.title);
+                        try {
+                            finalImageName = await downloadImage(data.imageInput, data.title);
+                            if (!finalImageName) {
+                                console.error(`Gagal mengunduh gambar untuk buku "${data.title}" dari URL: ${data.imageInput}`);
+                            }
+                        } catch (err) {
+                            console.error(`Error saat download gambar untuk "${data.title}":`, err.message);
+                        }
                     } else {
                         const checkPath = path.join(__dirname, '../public/image/uploads', data.imageInput);
                         if (fs.existsSync(checkPath)) finalImageName = data.imageInput;
@@ -385,13 +488,57 @@ module.exports = {
                     });
                     successCount++;
                 } else {
-                    // --- LENGKAPI DATA ---
+                    // --- LENGKAPI DATA / UPDATE BUKU YANG SUDAH ADA ---
                     const updateData = {};
                     const fields = ['edition', 'publish_year', 'publish_place', 'physical_description', 'isbn', 'call_number', 'language', 'shelf_location', 'notes', 'abstract'];
                     fields.forEach(f => {
                         if ((!book[f] || book[f] === '-' || book[f] === '') && data[f]) updateData[f] = data[f];
                     });
-                    if ((!book.image || book.image === '') && finalImageName) updateData.image = finalImageName;
+                    
+                    // LOGIKA GAMBAR: Jika ada gambar baru, hapus gambar lama terlebih dahulu
+                    if (finalImageName) {
+                        // Simpan nama gambar lama sebelum update
+                        const oldImageName = book.image;
+                        
+                        // Update dengan gambar baru (selalu update jika ada gambar baru)
+                        updateData.image = finalImageName;
+                        
+                        // Hapus gambar lama jika berbeda dengan gambar baru
+                        if (oldImageName && oldImageName !== finalImageName) {
+                            console.log(`\n[Update Buku] Menghapus gambar lama: ${oldImageName}`);
+                            try {
+                                const oldImagePath = path.join(__dirname, '../public/image/uploads', oldImageName);
+                                if (fs.existsSync(oldImagePath)) {
+                                    // Cek apakah gambar lama masih digunakan oleh buku lain
+                                    const booksUsingOldImage = await Book.count({
+                                        where: { 
+                                            image: oldImageName,
+                                            id: { [Op.ne]: book.id } // Kecuali buku yang sedang diupdate
+                                        }
+                                    });
+                                    
+                                    if (booksUsingOldImage === 0) {
+                                        // Tidak ada buku lain yang menggunakan gambar lama, hapus file
+                                        fs.unlinkSync(oldImagePath);
+                                        console.log(`✓ Gambar lama berhasil dihapus: ${oldImageName}`);
+                                        
+                                    } else {
+                                        console.log(`⚠️  Gambar lama ${oldImageName} masih digunakan oleh ${booksUsingOldImage} buku lain, tidak dihapus`);
+                                    }
+                                } else {
+                                    console.log(`⚠️  File gambar lama tidak ditemukan di filesystem: ${oldImageName}`);
+                                }
+                            } catch (err) {
+                                console.error(`❌ Error menghapus gambar lama ${oldImageName}:`, err.message);
+                            }
+                        } else if (oldImageName === finalImageName) {
+                            console.log(`✓ Gambar sama dengan yang sudah ada, tidak perlu update: ${finalImageName}`);
+                        }
+                    } else if ((!book.image || book.image === '') && finalImageName) {
+                        // Jika buku belum punya gambar dan ada gambar baru
+                        updateData.image = finalImageName;
+                    }
+                    
                     if (Object.keys(updateData).length > 0) await book.update(updateData);
                     existingCount++;
                 }
@@ -470,11 +617,27 @@ module.exports = {
                 // Konversi excludeIds ke array jika cuma 1 string
                 const excluded = Array.isArray(excludeIds) ? excludeIds : (excludeIds ? [excludeIds] : []);
                 
+                // Ambil semua buku yang akan dihapus untuk cleanup gambar
+                const booksToDelete = await Book.findAll({
+                    where: {
+                        id: { [Op.notIn]: excluded }
+                    },
+                    attributes: ['image']
+                });
+                
+                // Hapus buku
                 await Book.destroy({
                     where: {
                         id: { [Op.notIn]: excluded } // HAPUS SEMUA KECUALI ID DI LIST INI
                     }
                 });
+                
+                // Cleanup gambar yang tidak digunakan
+                const uniqueImages = [...new Set(booksToDelete.map(b => b.image).filter(img => img))];
+                for (const imageFilename of uniqueImages) {
+                    await cleanupUnusedImage(imageFilename);
+                }
+                
                 return res.redirect("/admin/books?deleteSuccess=all");
             }
 
@@ -482,9 +645,21 @@ module.exports = {
             const idsToDelete = Array.isArray(bookIds) ? bookIds : [bookIds];
             if (!idsToDelete || idsToDelete.length === 0) return res.redirect(redirectUrl);
 
+            // Ambil semua buku yang akan dihapus untuk cleanup gambar
+            const booksToDelete = await Book.findAll({
+                where: { id: { [Op.in]: idsToDelete } },
+                attributes: ['image']
+            });
+
             await Book.destroy({
                 where: { id: { [Op.in]: idsToDelete } }
             });
+
+            // Cleanup gambar yang tidak digunakan
+            const uniqueImages = [...new Set(booksToDelete.map(b => b.image).filter(img => img))];
+            for (const imageFilename of uniqueImages) {
+                await cleanupUnusedImage(imageFilename);
+            }
 
             res.redirect(`${redirectUrl}&deleteSuccess=${idsToDelete.length}`); // Ganti ids.length jadi idsToDelete.length
         } catch (err) {
@@ -802,8 +977,14 @@ module.exports = {
             const book = await Book.findByPk(req.params.id);
             if (!book) return res.status(404).send("Buku tidak ditemukan");
 
+            const imageFilename = book.image;
             await book.destroy();
-            res.redirect(`${redirectUrl}&deleteSuccess=${ids.length}`);
+            
+            // Cleanup gambar yang tidak digunakan
+            await cleanupUnusedImage(imageFilename);
+            
+            const redirectUrl = `/admin/books?deleteSuccess=1`;
+            res.redirect(redirectUrl);
         } catch (err) {
             console.log(err);
             res.status(500).send("Gagal menghapus buku");

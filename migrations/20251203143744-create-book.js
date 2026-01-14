@@ -15,7 +15,7 @@ module.exports = {
       },
 
       edition: Sequelize.STRING,
-      publish_year: Sequelize.STRING(4),
+      publish_year: Sequelize.STRING(20),
       publish_place: Sequelize.STRING,
       physical_description: Sequelize.STRING,
       isbn: Sequelize.STRING(50),

@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         title: DataTypes.STRING(500),
         edition: DataTypes.STRING,
-        publish_year: DataTypes.STRING(4),
+        publish_year: DataTypes.STRING(20),
         publish_place: DataTypes.STRING,
         physical_description: DataTypes.STRING,
         isbn: DataTypes.STRING(50),
