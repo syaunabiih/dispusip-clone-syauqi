@@ -257,35 +257,41 @@
     <label class="font-medium">Cover Buku</label>
 
     <div id="cover-wrapper" class="mt-2 space-y-2">
+        <!-- Hidden input untuk menandai jika gambar lama dihapus -->
+        <input type="hidden" name="remove_image" id="remove-image-flag" value="false">
+        
         <!-- Existing cover (jika ada) -->
-    <% if (book.image) { %>
+        <% if (book.image) { %>
             <div id="existing-cover" class="flex items-center gap-3">
-            <span class="px-3 py-1 bg-gray-200 rounded text-sm">
-                <%= book.image %>
-            </span>
-            <button 
-                type="button" 
+                <div class="flex items-center gap-2">
+                    <img src="/image/uploads/<%= book.image %>" alt="Cover" class="w-16 h-20 object-cover rounded border border-gray-200">
+                    <span class="px-3 py-1 bg-gray-200 rounded text-sm">
+                        <%= book.image %>
+                    </span>
+                </div>
+                <button 
+                    type="button" 
                     id="remove-existing-cover"
-                class="text-red-600 font-bold hover:text-red-800"
-                title="Hapus / ganti cover"
-            >
-                ✖
-            </button>
-        </div>
+                    class="text-red-600 font-bold hover:text-red-800"
+                    title="Hapus / ganti cover"
+                >
+                    ✖
+                </button>
+            </div>
 
-        <input 
-            type="file" 
-            name="image" 
-            id="cover-input"
-            accept="image/*" 
-                class="w-full p-2 border rounded hidden"
-        >
-    <% } else { %>
-        <input 
-            type="file" 
-            name="image" 
+            <input 
+                type="file" 
+                name="image" 
                 id="cover-input"
-            accept="image/*" 
+                accept="image/*" 
+                class="w-full p-2 border rounded hidden"
+            >
+        <% } else { %>
+            <input 
+                type="file" 
+                name="image" 
+                id="cover-input"
+                accept="image/*" 
                 class="w-full p-2 border rounded"
             >
         <% } %>
@@ -346,14 +352,19 @@
     const removeNewCoverBtn = document.getElementById('remove-new-cover');
 
     // Handler untuk menghapus cover yang sudah ada
+    const removeImageFlag = document.getElementById('remove-image-flag');
     if (removeExistingCoverBtn) {
         removeExistingCoverBtn.addEventListener('click', () => {
             if (existingCover) {
                 existingCover.remove();          // hapus nama file existing
             }
             if (coverInput) {
-            coverInput.classList.remove('hidden'); // munculkan input file
-            coverInput.value = "";           // reset input
+                coverInput.classList.remove('hidden'); // munculkan input file
+                coverInput.value = "";           // reset input
+            }
+            // Set flag untuk menghapus gambar lama
+            if (removeImageFlag) {
+                removeImageFlag.value = 'true';
             }
         });
     }
@@ -366,6 +377,11 @@
             // Sembunyikan existing cover jika ada
             if (existingCover) {
                 existingCover.classList.add('hidden');
+            }
+
+            // Reset flag remove_image karena ada file baru
+            if (removeImageFlag) {
+                removeImageFlag.value = 'false';
             }
 
             // Tampilkan preview dengan nama file
@@ -390,8 +406,12 @@
                 coverPreview.classList.add('hidden');   // sembunyikan preview
             }
             
-            // Tampilkan kembali existing cover jika ada
-            if (existingCover && existingCover.parentNode) {
+            // Jika existing cover sudah dihapus, set flag remove_image
+            if (existingCover && !existingCover.parentNode) {
+                if (removeImageFlag) {
+                    removeImageFlag.value = 'true';
+                }
+            } else if (existingCover && existingCover.parentNode) {
                 existingCover.classList.remove('hidden');
             }
         });
@@ -800,6 +820,19 @@
         const form = e.target;
         const formData = new FormData(form);
 
+        // Pastikan file benar-benar ditambahkan ke FormData
+        const coverInput = document.getElementById('cover-input');
+        if (coverInput && coverInput.files.length > 0) {
+            // Pastikan file ditambahkan ke FormData (meskipun input tersembunyi)
+            // FormData(form) seharusnya sudah mengambil file, tapi kita pastikan lagi
+            formData.set('image', coverInput.files[0]);
+            console.log('✓ File ditambahkan ke FormData:', coverInput.files[0].name);
+        } else {
+            // Tidak ada file baru, hapus dari FormData jika ada
+            formData.delete('image');
+            console.log('✓ Tidak ada file baru, hapus image dari FormData');
+        }
+
         // === TAMBAHAN VALIDASI DI SINI ===
         const title = formData.get('title');
         const isbn = formData.get('isbn');
@@ -823,6 +856,17 @@
         }
         // === AKHIR TAMBAHAN VALIDASI ===
 
+        // Debug: Cek apakah file ada di FormData
+        const imageFile = formData.get('image');
+        console.log('=== DEBUG FORM SUBMIT ===');
+        console.log('File yang akan dikirim:', imageFile ? `${imageFile.name} (${imageFile.size} bytes)` : 'Tidak ada file');
+        console.log('Remove image flag:', formData.get('remove_image'));
+        console.log('Cover input files:', coverInput ? coverInput.files.length : 'Input tidak ditemukan');
+        if (coverInput && coverInput.files.length > 0) {
+            console.log('File di input:', coverInput.files[0].name);
+        }
+        console.log('========================');
+        
         Swal.fire({
             title: 'Menyimpan perubahan...',
             allowOutsideClick: false,
@@ -833,6 +877,7 @@
             const response = await fetch(form.action, {
                 method: 'POST',
                 body: formData
+                // Jangan set Content-Type header, biarkan browser set otomatis dengan boundary untuk multipart/form-data
             });
 
             const result = await response.json();

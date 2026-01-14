@@ -883,8 +883,75 @@ module.exports = {
                 categoryId = newCategory.id;
             }
 
-            // 3. Update Data Utama Buku
-            await book.update({
+            // 3. Handle Gambar
+            const oldImageName = book.image;
+            console.log(`\n[UPDATE BOOK] Memproses gambar untuk buku ID ${book.id}`);
+            console.log(`  Gambar lama: ${oldImageName || 'Tidak ada'}`);
+            console.log(`  File baru diupload: ${req.file ? req.file.filename : 'Tidak ada'}`);
+            console.log(`  Remove image flag: ${data.remove_image || 'false'}`);
+            
+            // Cek apakah ada file baru yang diupload
+            if (req.file) {
+                // Ada file baru, gunakan filename baru
+                console.log(`  ✓ File baru ditemukan: ${req.file.filename}`);
+                
+                // Hapus gambar lama jika berbeda dengan gambar baru dan tidak digunakan buku lain
+                if (oldImageName && oldImageName !== req.file.filename) {
+                    try {
+                        const oldImagePath = path.join(__dirname, '../public/image/uploads', oldImageName);
+                        if (fs.existsSync(oldImagePath)) {
+                            // Cek apakah gambar lama masih digunakan oleh buku lain
+                            const booksUsingOldImage = await Book.count({
+                                where: { 
+                                    image: oldImageName,
+                                    id: { [Op.ne]: book.id }
+                                }
+                            });
+                            
+                            if (booksUsingOldImage === 0) {
+                                // Tidak ada buku lain yang menggunakan gambar lama, hapus file
+                                fs.unlinkSync(oldImagePath);
+                                console.log(`  ✓ Gambar lama dihapus dari filesystem: ${oldImageName}`);
+                            } else {
+                                console.log(`  ⚠️  Gambar lama ${oldImageName} masih digunakan oleh ${booksUsingOldImage} buku lain, tidak dihapus`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`  ❌ Error menghapus gambar lama ${oldImageName}:`, err.message);
+                    }
+                }
+            } else if (data.remove_image === 'true') {
+                // User menghapus gambar (dari tombol remove)
+                console.log(`  ✓ User menghapus gambar lama`);
+                
+                // Hapus file gambar lama jika tidak digunakan buku lain
+                if (oldImageName) {
+                    try {
+                        const oldImagePath = path.join(__dirname, '../public/image/uploads', oldImageName);
+                        if (fs.existsSync(oldImagePath)) {
+                            const booksUsingOldImage = await Book.count({
+                                where: { 
+                                    image: oldImageName,
+                                    id: { [Op.ne]: book.id }
+                                }
+                            });
+                            
+                            if (booksUsingOldImage === 0) {
+                                fs.unlinkSync(oldImagePath);
+                                console.log(`  ✓ Gambar lama dihapus dari filesystem: ${oldImageName}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`  ❌ Error menghapus gambar lama:`, err.message);
+                    }
+                }
+            } else {
+                // Tidak ada file baru dan tidak ada request untuk hapus
+                console.log(`  ✓ Tidak ada perubahan gambar, pertahankan gambar lama`);
+            }
+
+            // 4. Update Data Utama Buku
+            const updateData = {
                 title: data.title,
                 edition: data.edition,
                 publish_year: data.publish_year,
@@ -897,7 +964,35 @@ module.exports = {
                 language: data.language,
                 shelf_location: data.shelf_location,
                 category_id: categoryId
-            });
+            };
+            
+            // Selalu update image jika ada perubahan (file baru, dihapus, atau tetap sama)
+            // Ini memastikan gambar tersimpan dengan benar
+            if (req.file) {
+                // Ada file baru yang diupload - GUNAKAN FILE BARU
+                updateData.image = req.file.filename;
+                console.log(`  ✓✓✓ GAMBAR BARU AKAN DISIMPAN: ${req.file.filename} ✓✓✓`);
+            } else if (data.remove_image === 'true') {
+                // User menghapus gambar - SET NULL
+                updateData.image = null;
+                console.log(`  ✓✓✓ GAMBAR AKAN DIHAPUS DARI DATABASE ✓✓✓`);
+            } else {
+                // Tidak ada perubahan - PERTAHANKAN GAMBAR LAMA (atau null jika tidak ada)
+                updateData.image = oldImageName || null;
+                console.log(`  ✓ Gambar lama dipertahankan: ${oldImageName || 'Tidak ada'}`);
+            }
+            
+            console.log(`\n[UPDATE BOOK] Data yang akan diupdate:`);
+            console.log(`  Title: ${updateData.title}`);
+            console.log(`  Image: ${updateData.image || 'null'}`);
+            console.log(`  Has File: ${!!req.file}`);
+            console.log(`  Remove Image Flag: ${data.remove_image || 'false'}\n`);
+            
+            await book.update(updateData);
+            
+            // Verifikasi bahwa gambar tersimpan
+            await book.reload();
+            console.log(`✓✓✓ VERIFIKASI: Gambar di database setelah update: ${book.image || 'null'} ✓✓✓\n`);
 
             // 4. PROSES ULANG AUTHORS (Hapus Lama, Insert Baru)
             await BookAuthor.destroy({ where: { book_id: book.id } });
