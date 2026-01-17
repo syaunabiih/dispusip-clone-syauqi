@@ -238,7 +238,7 @@ module.exports = {
             const { count, rows: books } = await Book.findAndCountAll({
                 where: whereCondition,
                 include: includeOptions,
-                order: [['id', 'DESC']],
+                order: [['updatedAt', 'DESC']], // Urutkan berdasarkan updatedAt (buku yang terakhir di-update muncul di atas)
                 limit: limit,
                 offset: offset,
                 distinct: true,
