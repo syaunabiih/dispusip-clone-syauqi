@@ -33,6 +33,7 @@ async function compressImage(filePath) {
 
     while (quality >= 30) {
         outputBuffer = await sharp(filePath)
+            .rotate()
             .resize({ width: MAX_WIDTH, withoutEnlargement: true })
             .jpeg({ quality, mozjpeg: true })
             .toBuffer();
