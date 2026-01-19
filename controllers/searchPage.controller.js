@@ -53,6 +53,19 @@ module.exports = {
                 const upperSortOrder = sortOrder.toUpperCase();
                 finalSortOrder = validSortOrder.includes(upperSortOrder) ? upperSortOrder : "ASC";
             }
+            
+            // =========================
+            // LOGIKA SORTING KHUSUS UNTUK TANGGAL
+            // =========================
+            // Untuk updatedAt dan createdAt:
+            // - "Naik" (ASC) = Terbaru dulu → Terlama (harus DESC)
+            // - "Turun" (DESC) = Terlama dulu → Terbaru (harus ASC)
+            // Untuk title tetap normal (ASC = A-Z, DESC = Z-A)
+            let actualSortOrder = finalSortOrder;
+            if (finalSortBy === 'updatedAt' || finalSortBy === 'createdAt') {
+                // Balikkan logika: ASC menjadi DESC, DESC menjadi ASC
+                actualSortOrder = finalSortOrder === 'ASC' ? 'DESC' : 'ASC';
+            }
 
             // Validasi dan sanitasi page dan limit
             const currentPage = Math.max(1, parseInt(page) || 1);
@@ -256,17 +269,18 @@ module.exports = {
                 required: opt.required,
                 where: opt.where
             })));
-            console.log("Sorting:", { sortBy: finalSortBy, sortOrder: finalSortOrder });
+            console.log("Sorting:", { sortBy: finalSortBy, sortOrder: finalSortOrder, actualSortOrder: actualSortOrder });
             console.log("Pagination:", { page: currentPage, limit: perPage, offset });
             console.log("===================");
             
             // Urutkan berdasarkan parameter sortBy dan sortOrder (sudah divalidasi di atas)
+            // Gunakan actualSortOrder yang sudah disesuaikan untuk tanggal
             const { count, rows } = await Book.findAndCountAll({
                 where: whereCondition,
                 include: safeIncludeOptions,
                 limit: perPage,
                 offset,
-                order: [[finalSortBy, finalSortOrder]],
+                order: [[finalSortBy, actualSortOrder]],
                 distinct: true
             });
             
