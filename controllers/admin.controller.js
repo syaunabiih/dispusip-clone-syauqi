@@ -199,6 +199,8 @@ module.exports = {
 
             let searchValue = q.trim();
             let operator = Op.like;
+            
+            // Tentukan operator pencarian
             if (q) {
                 if (matchType === "startsWith") searchValue = `${q}%`;
                 else if (matchType === "endsWith") searchValue = `%${q}`;
@@ -206,18 +208,80 @@ module.exports = {
                 else searchValue = `%${q}%`;
             }
 
+            // 1. Inisialisasi Where Condition untuk Tabel Utama (Book)
             const whereCondition = {};
+            
+            // Filter Dropdown (Kategori & Tahun)
             if (category) whereCondition.category_id = category;
             if (year) whereCondition.publish_year = year;
-            if (subject) whereCondition['$Subjects.id$'] = subject;
 
-            if (q) {
-                if (searchBy === "title") whereCondition.title = { [operator]: searchValue };
-                if (searchBy === "isbn") whereCondition.isbn = { [operator]: searchValue };
-                if (searchBy === "subject") whereCondition['$Subjects.name$'] = { [operator]: searchValue };
-                if (searchBy === "category") whereCondition['$Category.name$'] = { [operator]: searchValue };
+            // 2. Inisialisasi Include Options
+            // Kita definisikan include di awal agar bisa dimodifikasi berdasarkan pencarian
+            const includeOptions = [
+                { model: Category, required: false },
+                { model: Author, as: 'Authors', required: false },
+                { model: Publisher, as: 'Publishers', required: false },
+                { model: Subject, as: 'Subjects', required: false },
+                { model: BookCopy, as: 'copies', required: false }
+            ];
+
+            // 3. Logika Filter Dropdown Subjek
+            if (subject) {
+                const subjectInclude = includeOptions.find(opt => opt.model === Subject);
+                if (subjectInclude) {
+                    subjectInclude.where = { id: subject };
+                    subjectInclude.required = true; // Inner join agar hanya buku dengan subjek ini yang muncul
+                }
             }
 
+            // 4. Logika Pencarian (Search Bar)
+            if (q) {
+                if (searchBy === "title") {
+                    whereCondition.title = { [operator]: searchValue };
+                } 
+                else if (searchBy === "isbn") {
+                    whereCondition.isbn = { [operator]: searchValue };
+                } 
+                else if (searchBy === "author") {
+                    // Cari di tabel Authors
+                    const authorInclude = includeOptions.find(opt => opt.model === Author);
+                    if (authorInclude) {
+                        authorInclude.where = { name: { [operator]: searchValue } };
+                        authorInclude.required = true;
+                    }
+                } 
+                else if (searchBy === "publisher") {
+                    // Cari di tabel Publishers
+                    const publisherInclude = includeOptions.find(opt => opt.model === Publisher);
+                    if (publisherInclude) {
+                        publisherInclude.where = { name: { [operator]: searchValue } };
+                        publisherInclude.required = true;
+                    }
+                } 
+                else if (searchBy === "subject") {
+                    // Cari di tabel Subjects
+                    const subjectInclude = includeOptions.find(opt => opt.model === Subject);
+                    if (subjectInclude) {
+                        // Jika sudah ada filter ID (dari dropdown), kita timpa atau gabung (disini kita timpa untuk pencarian teks)
+                        // Atau gunakan Op.and jika ingin menggabungkan dropdown + search text
+                        subjectInclude.where = { 
+                            ...subjectInclude.where, // Pertahankan filter ID jika ada (opsional)
+                            name: { [operator]: searchValue } 
+                        };
+                        subjectInclude.required = true;
+                    }
+                }
+                else if (searchBy === "category") {
+                    // Cari di tabel Categories
+                    const categoryInclude = includeOptions.find(opt => opt.model === Category);
+                    if (categoryInclude) {
+                        categoryInclude.where = { name: { [operator]: searchValue } };
+                        categoryInclude.required = true;
+                    }
+                }
+            }
+
+            // 5. Logika Filter "Data Tidak Lengkap"
             if (isIncomplete) {
                 whereCondition[Op.or] = [
                     { category_id: null },
@@ -230,58 +294,38 @@ module.exports = {
                 ];
             }
 
-            const includeOptions = [
-                { model: Category, required: false },
-                { model: Author, as: 'Authors', required: false },
-                { model: Publisher, as: 'Publishers', required: false },
-                { model: Subject, as: 'Subjects', required: false },
-                { model: BookCopy, as: 'copies', required: false }
-            ];
-
+            // 6. Eksekusi Query
             const { count, rows: books } = await Book.findAndCountAll({
                 where: whereCondition,
                 include: includeOptions,
-                order: [['updatedAt', 'DESC']], // Urutkan berdasarkan updatedAt (buku yang terakhir di-update muncul di atas)
+                order: [['updatedAt', 'DESC']],
                 limit: limit,
                 offset: offset,
-                distinct: true,
-                col: 'id'
+                distinct: true, // Penting agar count akurat meski ada join many-to-many
+                col: 'id',
+                subQuery: false // [PENTING] Nonaktifkan subquery agar where clause pada include terbaca
             });
 
-            // Hitung total eksemplar (nomor induk) sesuai filter
-            // Total buku = jumlah semua nomor induk (BookCopy) dari database BookCopies
-            // BUKAN dari field stock_total di Book, dan BUKAN jumlah judul buku (Book)
-            // Satu buku bisa punya beberapa nomor induk, jadi total buku = jumlah semua BookCopy
-            
+            // Hitung total eksemplar (Logika sebelumnya)
             let totalFilteredCopies;
-            
-            // Jika tidak ada filter, hitung langsung semua BookCopy dari database
             const hasFilter = q || category || subject || year || isIncomplete;
             
             if (!hasFilter) {
-                // Tidak ada filter, hitung SEMUA BookCopy langsung dari database (paling cepat dan akurat)
                 totalFilteredCopies = await BookCopy.count();
                 console.log(`[LIST BOOKS] Tidak ada filter - Total Buku dari database: ${totalFilteredCopies}`);
             } else {
-                // Ada filter, ambil book_id yang memenuhi filter lalu hitung BookCopy-nya
-                // Step 1: Ambil semua book_id yang memenuhi filter
+                // Gunakan query yang sama (tanpa limit/offset) untuk mendapatkan ID buku terfilter
                 const filteredBookRecords = await Book.findAll({
                     where: whereCondition,
-                    include: [
-                        { model: Category, required: false },
-                        { model: Author, as: 'Authors', required: false },
-                        { model: Publisher, as: 'Publishers', required: false },
-                        { model: Subject, as: 'Subjects', required: false }
-                    ],
+                    include: includeOptions,
                     attributes: ['id'],
-                    distinct: true
+                    distinct: true,
+                    subQuery: false // Konsisten dengan query utama
                 });
                 
                 const filteredBookIds = filteredBookRecords.map(book => book.id);
-                console.log(`[LIST BOOKS] Filter aktif - Jumlah buku terfilter: ${filteredBookIds.length}, Book IDs: [${filteredBookIds.slice(0, 5).join(', ')}${filteredBookIds.length > 5 ? '...' : ''}]`);
+                console.log(`[LIST BOOKS] Filter aktif - Jumlah buku terfilter: ${filteredBookIds.length}`);
                 
-                // Step 2: Hitung total BookCopy dari buku-buku yang terfilter
-                // Ini menghitung langsung dari database BookCopies, bukan dari stock_total
                 if (filteredBookIds.length > 0) {
                     totalFilteredCopies = await BookCopy.count({
                         where: {
@@ -290,7 +334,6 @@ module.exports = {
                     });
                     console.log(`[LIST BOOKS] Total Buku (nomor induk) dari database: ${totalFilteredCopies}`);
                 } else {
-                    // Tidak ada buku yang memenuhi filter
                     totalFilteredCopies = 0;
                     console.log(`[LIST BOOKS] Tidak ada buku terfilter - Total Buku: 0`);
                 }
