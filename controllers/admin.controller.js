@@ -234,48 +234,68 @@ module.exports = {
                 }
             }
 
-            // 4. Logika Pencarian (Search Bar)
+            // 4. Logika Pencarian (Search Bar - Dengan Anti-Spasi & Token Based)
             if (q) {
+                // === SANITASI INPUT ===
+                // 1. Ambil string, trim spasi depan/belakang
+                // 2. Ganti multiple spasi ("  ") menjadi satu spasi (" ")
+                const cleanQ = String(q).trim().replace(/\s+/g, ' ');
+
+                // 3. Pecah menjadi token (kata per kata)
+                const tokens = cleanQ.split(' ').filter(t => t.length > 0);
+                
+                // Helper Query Builder
+                const createTokenQuery = (fieldName) => {
+                    // Jika user memilih "Exact", cari persis sesuai input yang sudah dirapikan
+                    if (matchType === "exact") {
+                        return { [fieldName]: { [Op.eq]: cleanQ } };
+                    }
+                    
+                    // Default: Token Based (Cari kata "kamus" DAN "indonesia")
+                    return {
+                        [Op.and]: tokens.map(token => ({
+                            [fieldName]: { [Op.like]: `%${token}%` }
+                        }))
+                    };
+                };
+
                 if (searchBy === "title") {
-                    whereCondition.title = { [operator]: searchValue };
+                    Object.assign(whereCondition, createTokenQuery('title'));
                 } 
                 else if (searchBy === "isbn") {
-                    whereCondition.isbn = { [operator]: searchValue };
+                    Object.assign(whereCondition, createTokenQuery('isbn'));
                 } 
                 else if (searchBy === "author") {
-                    // Cari di tabel Authors
                     const authorInclude = includeOptions.find(opt => opt.model === Author);
                     if (authorInclude) {
-                        authorInclude.where = { name: { [operator]: searchValue } };
+                        authorInclude.where = createTokenQuery('name');
                         authorInclude.required = true;
                     }
                 } 
                 else if (searchBy === "publisher") {
-                    // Cari di tabel Publishers
                     const publisherInclude = includeOptions.find(opt => opt.model === Publisher);
                     if (publisherInclude) {
-                        publisherInclude.where = { name: { [operator]: searchValue } };
+                        publisherInclude.where = createTokenQuery('name');
                         publisherInclude.required = true;
                     }
                 } 
                 else if (searchBy === "subject") {
-                    // Cari di tabel Subjects
                     const subjectInclude = includeOptions.find(opt => opt.model === Subject);
                     if (subjectInclude) {
-                        // Jika sudah ada filter ID (dari dropdown), kita timpa atau gabung (disini kita timpa untuk pencarian teks)
-                        // Atau gunakan Op.and jika ingin menggabungkan dropdown + search text
-                        subjectInclude.where = { 
-                            ...subjectInclude.where, // Pertahankan filter ID jika ada (opsional)
-                            name: { [operator]: searchValue } 
-                        };
+                        const tokenCondition = createTokenQuery('name');
+                        // Gabung dengan filter dropdown jika ada (agar filter dropdown tidak tertimpa)
+                        if (subjectInclude.where) {
+                            subjectInclude.where = { [Op.and]: [subjectInclude.where, tokenCondition] };
+                        } else {
+                            subjectInclude.where = tokenCondition;
+                        }
                         subjectInclude.required = true;
                     }
                 }
                 else if (searchBy === "category") {
-                    // Cari di tabel Categories
                     const categoryInclude = includeOptions.find(opt => opt.model === Category);
                     if (categoryInclude) {
-                        categoryInclude.where = { name: { [operator]: searchValue } };
+                        categoryInclude.where = createTokenQuery('name');
                         categoryInclude.required = true;
                     }
                 }
@@ -698,8 +718,7 @@ module.exports = {
 
             if (incomplete === "1") {
                 whereCondition[Op.or] = [
-                    { category_id: null }, { shelf_location: null }, { shelf_location: "" }, { shelf_location: "-" },
-                    { isbn: null }, { isbn: "" }, { call_number: null }, { call_number: "" },
+                    { category_id: null }, { call_number: null }, { call_number: "" },
                     Sequelize.literal(`NOT EXISTS (SELECT 1 FROM BookSubjects WHERE BookSubjects.book_id = Book.id)`),
                     Sequelize.literal(`NOT EXISTS (SELECT 1 FROM BookAuthors WHERE BookAuthors.book_id = Book.id AND BookAuthors.role = 'penulis')`),
                     Sequelize.literal(`NOT EXISTS (SELECT 1 FROM BookPublishers WHERE BookPublishers.book_id = Book.id)`),

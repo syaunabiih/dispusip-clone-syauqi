@@ -76,7 +76,10 @@ module.exports = {
             // MATCH TYPE
             // =========================
             // Normalize q untuk search (pastikan string)
-            const normalizedQ = typeof q === 'string' ? q.trim() : (Array.isArray(q) ? (q.find(v => v && String(v).trim()) || "").trim() : String(q || "").trim());
+            const rawQ = getFirstValue(req.query.q, "");
+            // 1. Trim: Hapus spasi depan belakang
+            // 2. Replace: Ubah spasi ganda menjadi satu spasi ("  " -> " ")
+            const normalizedQ = String(rawQ).trim().replace(/\s+/g, ' ');
             
             let searchValue = normalizedQ;
             let operator = Op.like;
@@ -149,36 +152,48 @@ module.exports = {
                     }
                 }
             }
-
             // =========================
             // SEARCH HANDLER
             // =========================
-            // Gunakan normalizedQ yang sudah dinormalisasi
             if (normalizedQ !== "") {
+                // 1. Pecah kata kunci menjadi array token
+                const tokens = normalizedQ.split(' ').filter(t => t.length > 0);
+                // 2. Fungsi Helper untuk membuat query Token-Based
+                const createTokenCondition = (field) => {
+                    // Jika matchType 'exact', cari persis
+                    if (matchType === "exact") {
+                        return { [field]: { [Op.eq]: normalizedQ } };
+                    }
+                    
+                    // Jika 'startsWith', token pertama harus di awal (opsional, tapi search "kamus" biasanya mengandung)
+                    // Disini kita gunakan logika: Semua token harus ada (AND) di dalam field tersebut
+                    return {
+                        [Op.and]: tokens.map(token => ({
+                            [field]: { [Op.like]: `%${token}%` }
+                        }))
+                    };
+                };
+
                 switch (searchBy) {
                     case "title":
-                        whereCondition.title = { [operator]: searchValue };
+                        Object.assign(whereCondition, createTokenCondition('title'));
                         break;
 
                     case "call_number":
-                        whereCondition.call_number = { [operator]: searchValue };
+                        Object.assign(whereCondition, createTokenCondition('call_number'));
                         break;
 
                     case "author":
-                        // Cari Author include dan set required + where
                         const authorInclude = includeOptions.find(opt => opt.model === Author);
                         if (authorInclude) {
                             authorInclude.required = true;
-                            // Jika sudah ada where (dari filter lain), gabungkan dengan Op.and
+                            const condition = createTokenCondition('name');
+                            
+                            // Gabungkan dengan where yang sudah ada (jika ada)
                             if (authorInclude.where) {
-                                authorInclude.where = {
-                                    [Op.and]: [
-                                        authorInclude.where,
-                                        { name: { [operator]: searchValue } }
-                                    ]
-                                };
+                                authorInclude.where = { [Op.and]: [authorInclude.where, condition] };
                             } else {
-                                authorInclude.where = { name: { [operator]: searchValue } };
+                                authorInclude.where = condition;
                             }
                         }
                         break;
@@ -187,15 +202,12 @@ module.exports = {
                         const publisherInclude = includeOptions.find(opt => opt.model === Publisher);
                         if (publisherInclude) {
                             publisherInclude.required = true;
+                            const condition = createTokenCondition('name');
+                            
                             if (publisherInclude.where) {
-                                publisherInclude.where = {
-                                    [Op.and]: [
-                                        publisherInclude.where,
-                                        { name: { [operator]: searchValue } }
-                                    ]
-                                };
+                                publisherInclude.where = { [Op.and]: [publisherInclude.where, condition] };
                             } else {
-                                publisherInclude.where = { name: { [operator]: searchValue } };
+                                publisherInclude.where = condition;
                             }
                         }
                         break;
@@ -204,32 +216,33 @@ module.exports = {
                         const subjectSearchInclude = includeOptions.find(opt => opt.model === Subject);
                         if (subjectSearchInclude) {
                             subjectSearchInclude.required = true;
-                            // Jika sudah ada where dari filter subject, gabungkan
+                            const condition = createTokenCondition('name');
+
                             if (subjectSearchInclude.where) {
-                                // Jika where adalah id (dari filter), tambahkan name search dengan Op.and
-                                subjectSearchInclude.where = {
-                                    [Op.and]: [
-                                        subjectSearchInclude.where,
-                                        { name: { [operator]: searchValue } }
-                                    ]
-                                };
+                                subjectSearchInclude.where = { [Op.and]: [subjectSearchInclude.where, condition] };
                             } else {
-                                subjectSearchInclude.where = { name: { [operator]: searchValue } };
+                                subjectSearchInclude.where = condition;
                             }
                         }
                         break;
 
                     case "all":
+                        // Untuk pencarian "Semua", agak tricky dengan token based.
+                        // Logika: Judul mengandung (Token A DAN Token B) ATAU No Panggil mengandung (Token A DAN Token B)
+                        const titleCondition = {
+                            [Op.and]: tokens.map(token => ({ title: { [Op.like]: `%${token}%` } }))
+                        };
+                        const callNumCondition = {
+                            [Op.and]: tokens.map(token => ({ call_number: { [Op.like]: `%${token}%` } }))
+                        };
+
                         whereCondition[Op.or] = [
-                            { title: { [operator]: searchValue } },
-                            { call_number: { [operator]: searchValue } }
+                            titleCondition,
+                            callNumCondition
                         ];
-                        // Untuk search "all", kita tidak perlu required pada includes
-                        // karena kita sudah search di title dan call_number
                         break;
                 }
             }
-
             // =========================
             // QUERY BUKU
             // =========================

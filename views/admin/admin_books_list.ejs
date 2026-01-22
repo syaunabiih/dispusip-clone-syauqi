@@ -324,7 +324,7 @@
                     const hasCallNumber = !!book.call_number && book.call_number.trim() !== "";
                     const hasAuthors = book.Authors && book.Authors.some(ba => ba.BookAuthor && ba.BookAuthor.role === 'penulis');
                     const hasPublishers = book.Publishers && book.Publishers.length > 0;
-                    const bookStatusIncomplete = !hasCategory || !hasSubjects || !hasShelf || !hasCopies || !hasIsbn || !hasCallNumber || !hasAuthors || !hasPublishers;
+                    const bookStatusIncomplete = !hasCategory || !hasSubjects || !hasCopies || !hasCallNumber || !hasAuthors || !hasPublishers;
                 %>
                 <tr class="border-t hover:bg-gray-50 book-row <%= bookStatusIncomplete ? 'is-incomplete' : '' %>">
                     <td class="p-2 sm:p-4">
