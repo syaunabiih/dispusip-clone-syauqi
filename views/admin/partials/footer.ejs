@@ -1,0 +1,79 @@
+    </main>
+    <script>
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("mainContent");
+        const toggleBtn = document.getElementById("toggleSidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+
+        // Cek apakah di desktop atau mobile
+        function isDesktop() {
+            return window.innerWidth >= 1024;
+        }
+
+        // Inisialisasi: di mobile sidebar hidden, di desktop visible
+        if (sidebar && mainContent) {
+            if (isDesktop()) {
+                sidebar.classList.remove("-translate-x-full");
+                mainContent.classList.add("lg:ml-64");
+            } else {
+                sidebar.classList.add("-translate-x-full");
+                mainContent.classList.remove("lg:ml-64");
+            }
+        }
+
+        let isOpen = !isDesktop();
+
+        // Toggle sidebar function
+        function toggleSidebar() {
+            if (isDesktop()) {
+                // Desktop: toggle normal
+                if (isOpen) {
+                    sidebar.classList.add("-translate-x-full");
+                    mainContent.classList.remove("lg:ml-64");
+                } else {
+                    sidebar.classList.remove("-translate-x-full");
+                    mainContent.classList.add("lg:ml-64");
+                }
+                isOpen = !isOpen;
+            } else {
+                // Mobile: toggle dengan overlay
+                if (isOpen) {
+                    sidebar.classList.add("-translate-x-full");
+                    if (overlay) overlay.classList.add("hidden");
+                    document.body.style.overflow = "";
+                } else {
+                    sidebar.classList.remove("-translate-x-full");
+                    if (overlay) overlay.classList.remove("hidden");
+                    document.body.style.overflow = "hidden";
+                }
+                isOpen = !isOpen;
+            }
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener("click", toggleSidebar);
+        }
+
+        // Tutup sidebar saat klik overlay
+        if (overlay) {
+            overlay.addEventListener("click", toggleSidebar);
+        }
+
+        // Handle resize
+        window.addEventListener("resize", () => {
+            if (isDesktop()) {
+                sidebar.classList.remove("-translate-x-full");
+                if (overlay) overlay.classList.add("hidden");
+                mainContent.classList.add("lg:ml-64");
+                document.body.style.overflow = "";
+                isOpen = true;
+            } else {
+                if (!isOpen) {
+                    sidebar.classList.add("-translate-x-full");
+                    if (overlay) overlay.classList.add("hidden");
+                }
+            }
+        });
+    </script>
+</body>
+</html>

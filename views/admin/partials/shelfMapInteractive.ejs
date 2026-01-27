@@ -1,0 +1,751 @@
+<div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+    <div class="p-6">
+        <% 
+            // Ambil parameter isPopup di awal untuk menghindari error
+            const isPopupParam = typeof isPopup !== 'undefined' ? isPopup : false;
+            
+            // Ambil shelfLocation dari parameter (untuk highlight awal jika ada)
+            let shelfRaw = typeof shelfLocation !== 'undefined' ? shelfLocation : '';
+            // Normalisasi: hapus prefix "Rak " jika ada, ubah ke uppercase
+            let shelf = shelfRaw.replace(/['"]+/g, '').replace(/^Rak\s*/i, '').trim().toUpperCase();
+            
+            // Fungsi untuk cek apakah rak ini adalah lokasi buku
+            function isBookRack(rackId, rackId2) {
+                if (!shelf) return false;
+                const shelfUpper = shelf.toUpperCase();
+                return shelfUpper === rackId.toUpperCase() || (rackId2 && shelfUpper === rackId2.toUpperCase());
+            }
+
+            // --- LAYOUT DATA ---
+            const layoutData = [
+                // --- 1. AREA ATAS KIRI ---
+                { id: 'cab1', type: 'cabinet', label: '', x: 2, y: 3, w: 5, h: 4, color: 'bg-gray-300' },
+                { id: 'cab2', type: 'cabinet', label: '', x: 2, y: 8, w: 5, h: 4, color: 'bg-gray-300' },
+                
+                // Meja hijau toska vertikal (di bawah kabinet)
+                { id: 'desk_left_top', type: 'desk', label: '', x: 3, y: 16, w: 4, h: 12, color: 'bg-teal-400' },
+
+                // Meja Pustakawan
+                { id: 'lib_desk', type: 'desk', label: '', x: 13, y: 8, w: 22, h: 7, color: 'bg-teal-400' },
+
+                // --- 2. SIDEBAR KIRI (MEJA PENGUNJUNG VERTIKAL) ---
+                { id: 'visit_v_1', type: 'desk', label: '', x: 2, y: 35, w: 5, h: 12, color: 'bg-red-400', verticalText: true },
+                { id: 'visit_v_2', type: 'desk', label: '', x: 2, y: 50, w: 5, h: 12, color: 'bg-red-400', verticalText: true },
+                { id: 'visit_v_3', type: 'desk', label: '', x: 2, y: 65, w: 5, h: 12, color: 'bg-red-400', verticalText: true },
+
+                // --- 3. POJOK KIRI BAWAH (MEJA PENGUNJUNG HORIZONTAL) ---
+                { id: 'visit_h_1', type: 'desk', label: '', x: 2, y: 85, w: 9, h: 7, color: 'bg-red-400' },
+                { id: 'visit_h_2', type: 'desk', label: '', x: 13, y: 85, w: 9, h: 7, color: 'bg-red-400' },
+                { id: 'visit_h_3', type: 'desk', label: '', x: 24, y: 85, w: 9, h: 7, color: 'bg-red-400' },
+
+                // --- 4. TENGAH RUANGAN ---
+                { id: 'center_1', type: 'desk', label: '', x: 45, y: 40, w: 13, h: 12, color: 'bg-red-400' },
+                { id: 'center_2', type: 'desk', label: '', x: 59, y: 40, w: 13, h: 12, color: 'bg-red-400' },
+                { id: 'center_3', type: 'desk', label: '', x: 73, y: 40, w: 13, h: 12, color: 'bg-red-400' },
+                
+                // Meja Buku Tamu (Hijau)
+                { id: 'guest_book', type: 'desk', label: '', x: 38, y: 65, w: 6, h: 6, color: 'bg-green-400' },
+
+                // --- 5. POJOK KANAN BAWAH (KOTAK MERAH) ---
+                { id: 'corner_red', type: 'desk', label: '', x: 85, y: 85, w: 8, h: 8, color: 'bg-red-400' }
+            ];
+
+            // --- LOGIKA RAK BUKU ---
+            const rackStartX = 45; 
+            const rackWidth = 4;
+            const rackGap = 1.2;   
+            
+            // A. RAK ATAS (8 Kolom: A1-H1)
+            const topLabels = ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1'];
+            for (let i = 0; i < 8; i++) {
+                const currentX = rackStartX + (i * (rackWidth + rackGap));
+                const label = topLabels[i];
+                
+                layoutData.push({ 
+                    id: `rack_top_${i}`, type: 'rack', label: label, 
+                    x: currentX, y: 5, w: rackWidth, h: 24, color: 'bg-gray-300', 
+                    verticalText: true, rackId: label
+                });
+            }
+
+            // B. RAK BAWAH (8 Kolom: A2-H2)
+            const bottomLabels = ['A2', 'B2', 'C2', 'D2', 'E2', 'F2', 'G2', 'H2'];
+            
+            // 4 Rak gabungan pertama (A2-D2)
+            for (let i = 0; i < 4; i++) {
+                const currentX = rackStartX + (i * (rackWidth + rackGap));
+                const label = bottomLabels[i];
+                layoutData.push({ 
+                    id: `rack_bot_${i}`, type: 'rack', label: label, 
+                    x: currentX, y: 65, w: rackWidth, h: 24, color: 'bg-gray-300', 
+                    verticalText: true, rackId: label
+                });
+            }
+
+            // Rak E2 (gap)
+            const gapRackX = rackStartX + (4 * (rackWidth + rackGap));
+            layoutData.push({ 
+                id: 'rack_gap', type: 'rack', label: 'E2', 
+                x: gapRackX, y: 77, w: rackWidth, h: 12, color: 'bg-gray-300', 
+                verticalText: true, rackId: 'E2'
+            });
+
+            // 2 Rak gabungan setelah E2 (F2, G2)
+            for (let i = 0; i < 2; i++) {
+                const currentX = rackStartX + ((5 + i) * (rackWidth + rackGap));
+                const label = bottomLabels[5 + i];
+                layoutData.push({ 
+                    id: `rack_bot_${5 + i}`, type: 'rack', label: label, 
+                    x: currentX, y: 65, w: rackWidth, h: 24, color: 'bg-gray-300', 
+                    verticalText: true, rackId: label
+                });
+            }
+
+            // C. RAK VERTIKAL POJOK KANAN (H2)
+            layoutData.push({ 
+                id: 'rack_right_combined', type: 'rack', label: 'H2', 
+                x: 88, y: 55, w: 4, h: 24, color: 'bg-gray-300', 
+                verticalText: true, rackId: 'H2'
+            });
+        %>
+
+        <%
+            // Tentukan ukuran map berdasarkan apakah ini popup atau tidak
+            // Gunakan isPopupParam yang sudah didefinisikan di awal
+            const mapSizeClass = isPopupParam ? 'aspect-[2/1] max-h-[300px] sm:max-h-[400px]' : 'aspect-[16/9]';
+        %>
+        <div 
+            id="shelf-map-container" 
+            class="relative w-full <%= mapSizeClass %> bg-white border border-gray-300 shadow-sm rounded-lg overflow-hidden"
+            data-input-field-id="<%= typeof inputFieldId !== 'undefined' ? inputFieldId : 'shelf_location' %>"
+        >
+            
+            <% layoutData.forEach(item => { 
+                const isHighlighted = item.type === 'rack' && item.rackId && isBookRack(item.rackId, item.rackId2);
+                
+                // === LOGIKA HIGHLIGHT (BIRU) ===
+                // Jika aktif: Gunakan warna Biru (blue-600), shadow biru, border biru tua
+                const finalColor = isHighlighted ? 'bg-blue-600 animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.6)] z-10' : item.color;
+                const textColor = isHighlighted ? 'text-white' : (item.type === 'desk' ? 'text-white' : 'text-gray-700');
+                const borderColor = isHighlighted ? 'border-blue-800 border-2' : 'border-gray-500/30 border';
+                
+                // Untuk rak, tambahkan class untuk interaktif
+                const clickableClass = item.type === 'rack' && item.rackId ? 'cursor-pointer hover:scale-110 hover:shadow-lg' : 'cursor-default';
+                const dataRackId = item.type === 'rack' && item.rackId ? `data-rack-id="${item.rackId}"` : '';
+            %>
+                <div 
+                    class="absolute flex items-center justify-center rounded-sm transition-all <%= finalColor %> <%= textColor %> <%= borderColor %> <%= clickableClass %> p-0"
+                    <%= dataRackId %>
+                    style="
+                        left: <%= item.x %>%;
+                        top: <%= item.y %>%;
+                        width: <%= item.w %>%;
+                        height: <%= item.h %>%;
+                    "
+                >
+                    <% if (item.type === 'rack' && item.label) { %>
+                        <span 
+                            class="text-[7px] md:text-[8px] font-bold text-center leading-none tracking-tighter overflow-hidden w-full"
+                            style="
+                                writing-mode: <%= item.verticalText ? 'vertical-rl' : 'horizontal-tb' %>;
+                                transform: <%= item.verticalText ? 'rotate(180deg)' : 'none' %>;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                width: 100%;
+                                height: 100%;
+                                padding: 1px;
+                            "
+                        >
+                            <%= item.label %>
+                        </span>
+                    <% } %>
+                </div>
+            <% }); %>
+            
+        </div>
+        
+        <div class="mt-6 flex flex-wrap justify-center gap-4 text-xs font-medium text-gray-600">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-gray-300 border border-gray-400"></div> 
+                <span>Rak Buku</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-teal-400 border border-gray-400"></div> 
+                <span>Meja Pustakawan</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-red-400 border border-gray-400"></div> 
+                <span>Meja Pengunjung</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-green-400 border border-gray-400"></div> 
+                <span>Meja Buku Tamu</span>
+            </div>
+            <div id="selected-rack-indicator" class="flex items-center gap-2 p-1 bg-blue-50 rounded border border-blue-200 hidden">
+                <div class="w-4 h-4 bg-blue-600 border border-blue-800 animate-pulse"></div> 
+                <span class="text-blue-800 font-bold">Rak Terpilih: <span id="selected-rack-label">-</span></span>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🗺️ === SHELF MAP INTERACTIVE DIINISIALISASI ===');
+    
+    // Ambil inputFieldId dari data attribute container
+    const mapContainer = document.getElementById('shelf-map-container');
+    console.log('📍 mapContainer:', mapContainer);
+    
+    if (!mapContainer) {
+        console.error('❌ Map container TIDAK DITEMUKAN!');
+        return;
+    }
+    
+    console.log('✅ Map container ditemukan');
+    const inputFieldId = mapContainer.getAttribute('data-input-field-id') || 'shelf_location';
+    console.log('📍 inputFieldId:', inputFieldId);
+    
+    const inputField = document.getElementById(inputFieldId);
+    console.log('📍 inputField:', inputField);
+    
+    if (!inputField) {
+        console.error('❌ Input field dengan ID "' + inputFieldId + '" tidak ditemukan');
+        return;
+    }
+    
+    console.log('✅ Input field ditemukan');
+    
+    // Cek jumlah rak awal
+    const racks = mapContainer.querySelectorAll('[data-rack-id]');
+    console.log('📊 Jumlah rak awal:', racks.length);
+
+    // State untuk rak yang dipilih
+    let selectedRackId = null;
+    
+    // Fungsi untuk update highlight
+    function updateHighlight(rackId) {
+        console.log('🎨 === updateHighlight DIPANGGIL ===');
+        console.log('📥 Parameter rackId:', rackId);
+        console.log('📥 rackId type:', typeof rackId);
+        
+        if (!mapContainer) {
+            console.error('❌ mapContainer TIDAK ADA!');
+            return;
+        }
+        
+        // Hapus highlight dari semua rak (hanya dalam mapContainer)
+        const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
+        console.log('📊 Total rak ditemukan:', allRacks.length);
+        
+        const rackIdClean = rackId ? rackId.trim().toUpperCase() : '';
+        console.log('🔍 Mencari rak dengan ID:', rackIdClean);
+        
+        let foundSelected = false;
+        let processedCount = 0;
+        
+        allRacks.forEach((rack, index) => {
+            let currentRackId = rack.getAttribute('data-rack-id');
+            console.log(`  Rak #${index + 1}: attribute value = "${currentRackId}"`);
+            
+            // Hapus tanda kutip ganda jika ada
+            if (currentRackId) {
+                const beforeClean = currentRackId;
+                currentRackId = currentRackId.replace(/^["']+|["']+$/g, '').trim().toUpperCase();
+                if (beforeClean !== currentRackId) {
+                    console.log(`    ⚠️ Dibersihkan dari "${beforeClean}" menjadi "${currentRackId}"`);
+                }
+            }
+            
+            const isSelected = currentRackId === rackIdClean;
+            console.log(`    ${isSelected ? '✅' : '⚪'} Match: ${currentRackId} === ${rackIdClean}? ${isSelected}`);
+            
+            if (isSelected) {
+                foundSelected = true;
+                console.log(`    🎯 RAK DIPILIH DITEMUKAN!`);
+                console.log(`    📍 Element:`, rack);
+                console.log(`    📍 TagName:`, rack.tagName);
+                console.log(`    📍 Classes sebelum:`, rack.className);
+                
+                // Hapus semua class yang mungkin konflik
+                rack.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border', 
+                                     'bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 
+                                     'animate-pulse', 'z-10', 'bg-gray-200', 'bg-gray-400');
+                
+                // Tambah class highlight
+                rack.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                console.log(`    📍 Classes setelah:`, rack.className);
+                
+                // Set inline style dengan !important untuk memastikan warna ter-apply
+                console.log(`    🎨 Mengaplikasikan inline styles...`);
+                rack.style.setProperty('background-color', '#2563eb', 'important'); // blue-600
+                rack.style.setProperty('color', '#ffffff', 'important');
+                rack.style.setProperty('border-color', '#1e3a8a', 'important'); // blue-800
+                rack.style.setProperty('border-width', '2px', 'important');
+                rack.style.setProperty('border-style', 'solid', 'important');
+                rack.style.setProperty('z-index', '10', 'important');
+                rack.style.setProperty('box-shadow', '0 0 15px rgba(37,99,235,0.6)', 'important');
+                
+                // Verifikasi style ter-apply
+                const computedBg = window.getComputedStyle(rack).backgroundColor;
+                const computedColor = window.getComputedStyle(rack).color;
+                console.log(`    ✅ Computed background-color:`, computedBg);
+                console.log(`    ✅ Computed color:`, computedColor);
+                console.log(`    ✅ Inline style background-color:`, rack.style.backgroundColor);
+                console.log(`    ✅ Inline style color:`, rack.style.color);
+                
+                // Force reflow untuk memastikan style ter-apply
+                void rack.offsetHeight;
+                console.log(`    ✅ Reflow dipaksa`);
+                
+            } else {
+                // Reset rak yang tidak dipilih
+                rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                rack.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                
+                // Reset inline style
+                rack.style.removeProperty('background-color');
+                rack.style.removeProperty('color');
+                rack.style.removeProperty('border-color');
+                rack.style.removeProperty('border-width');
+                rack.style.removeProperty('border-style');
+                rack.style.removeProperty('z-index');
+                rack.style.removeProperty('box-shadow');
+            }
+            processedCount++;
+        });
+        
+        console.log(`📊 Total rak diproses: ${processedCount}`);
+        console.log(`🎯 Rak yang dipilih ditemukan: ${foundSelected ? '✅ YA' : '❌ TIDAK'}`);
+        
+        // Update indicator
+        const indicator = document.getElementById('selected-rack-indicator');
+        const label = document.getElementById('selected-rack-label');
+        if (indicator && label) {
+            if (rackId) {
+                label.textContent = rackIdClean;
+                indicator.classList.remove('hidden');
+                console.log('✅ Indicator di-update ke:', rackIdClean);
+            } else {
+                indicator.classList.add('hidden');
+                console.log('✅ Indicator disembunyikan');
+            }
+        } else {
+            console.warn('⚠️ Indicator atau label tidak ditemukan');
+        }
+        
+        console.log('🎨 === updateHighlight SELESAI ===');
+    }
+    
+    // Event listener untuk klik rak
+    if (mapContainer) {
+        console.log('✅ Event listener untuk klik rak dipasang pada mapContainer');
+        mapContainer.addEventListener('click', function(e) {
+            console.log('🖱️ ========================================');
+            console.log('🖱️ === CLICK EVENT DIPANGGIL ===');
+            console.log('🖱️ ========================================');
+            console.log('🖱️ Timestamp:', new Date().toISOString());
+            console.log('🖱️ selectedRackId SEBELUM click:', selectedRackId);
+            console.log('🖱️ inputField.value SEBELUM click:', inputField.value);
+            console.log('🖱️ Target element:', e.target);
+            console.log('🖱️ Target tagName:', e.target.tagName);
+            console.log('🖱️ Target classes:', e.target.className);
+            
+            // Cari elemen rak yang diklik (bisa rak itu sendiri atau child-nya)
+            let rackElement = e.target.closest('[data-rack-id]');
+            console.log('🖱️ Rack element ditemukan:', rackElement);
+            
+            if (rackElement) {
+                const rackId = rackElement.getAttribute('data-rack-id');
+                console.log('🖱️ 📦 Rack ID dari attribute:', rackId);
+                console.log('🖱️ 📦 Rack ID type:', typeof rackId);
+                console.log('🖱️ 📦 Rack ID length:', rackId ? rackId.length : 0);
+                
+                if (rackId) {
+                    // Clean rackId dari quotes
+                    const cleanRackId = rackId.replace(/^["']+|["']+$/g, '').trim();
+                    console.log('🖱️ 📦 Clean Rack ID:', cleanRackId);
+                    
+                    // Update selectedRackId SEBELUM update highlight untuk mencegah initializeHighlight me-reset
+                    const oldSelectedRackId = selectedRackId;
+                    selectedRackId = cleanRackId;
+                    console.log('🖱️ ✅ selectedRackId di-update dari:', oldSelectedRackId, 'ke:', selectedRackId);
+                    
+                    // Update input field dengan format "Rak [LABEL]"
+                    const oldInputValue = inputField.value;
+                    const shelfValue = 'Rak ' + cleanRackId;
+                    inputField.value = shelfValue;
+                    console.log('🖱️ ✅ Input field di-update dari:', oldInputValue, 'ke:', shelfValue);
+                    
+                    // Update highlight
+                    console.log('🖱️ 🎨 Memanggil updateHighlight dengan:', cleanRackId);
+                    updateHighlight(cleanRackId);
+                    console.log('🖱️ ✅ updateHighlight SELESAI dipanggil');
+                    
+                    // Trigger custom event untuk memberitahu admin_edit_book.ejs bahwa user sudah klik rak baru
+                    // Ini akan update tempShelfLocation di admin_edit_book.ejs
+                    const userClickedEvent = new CustomEvent('userClickedRack', {
+                        detail: { value: shelfValue, rackId: cleanRackId }
+                    });
+                    window.dispatchEvent(userClickedEvent);
+                    console.log('🖱️ 📢 Event userClickedRack di-trigger dengan value:', shelfValue);
+                    
+                    // JANGAN trigger shelfLocationUpdated event karena ini akan memanggil initializeHighlight
+                    // yang akan me-reset highlight ke nilai lama
+                    // Hanya trigger change event biasa
+                    console.log('🖱️ 📢 Triggering change event (TANPA shelfLocationUpdated)');
+                    inputField.dispatchEvent(new Event('change', { bubbles: true }));
+                    console.log('🖱️ ✅ Change event di-trigger');
+                    console.log('🖱️ selectedRackId SETELAH click:', selectedRackId);
+                    console.log('🖱️ inputField.value SETELAH click:', inputField.value);
+                    console.log('🖱️ ========================================');
+                } else {
+                    console.error('🖱️ ❌ Rack ID TIDAK DITEMUKAN dari attribute!');
+                }
+            } else {
+                console.warn('🖱️ ⚠️ Rack element TIDAK DITEMUKAN (bukan klik pada rak)');
+            }
+        });
+    } else {
+        console.error('❌ mapContainer TIDAK DITEMUKAN, event listener tidak bisa dipasang!');
+    }
+    
+    // Fungsi untuk inisialisasi highlight berdasarkan nilai input
+    function initializeHighlight() {
+        console.log('🔄 ========================================');
+        console.log('🔄 === initializeHighlight DIPANGGIL ===');
+        console.log('🔄 ========================================');
+        console.log('🔄 Timestamp:', new Date().toISOString());
+        console.log('🔄 Stack trace:', new Error().stack);
+        
+        if (!inputField || !mapContainer) {
+            console.log('🔄 ❌ inputField atau mapContainer tidak ada, return');
+            return;
+        }
+        
+        console.log('🔄 selectedRackId saat ini:', selectedRackId);
+        console.log('🔄 inputField.value saat ini:', inputField.value);
+        
+        // Pastikan map container sudah terlihat (popup sudah terbuka)
+        const modal = document.getElementById('shelf-map-modal');
+        if (modal && modal.classList.contains('hidden')) {
+            console.log('🔄 ⏭️ Popup masih hidden, return');
+            return; // Skip jika popup masih hidden
+        }
+        
+        // Cek apakah ada rak di map
+        const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
+        if (allRacks.length === 0) {
+            console.log('🔄 ⏭️ Rak belum ter-render, return');
+            return; // Skip jika rak belum ter-render
+        }
+        
+        console.log('🔄 Jumlah rak ditemukan:', allRacks.length);
+        
+        if (inputField.value) {
+            const currentValue = inputField.value.trim();
+            console.log('🔄 currentValue dari input:', currentValue);
+            
+            // Ekstrak rak ID dari format "Rak A1" atau "A1"
+            const match = currentValue.match(/Rak\s*([A-H][12])/i) || currentValue.match(/^([A-H][12])$/i);
+            if (match && match[1]) {
+                const rackId = match[1].toUpperCase().trim();
+                console.log('🔄 rackId yang diekstrak:', rackId);
+                console.log('🔄 selectedRackId:', selectedRackId);
+                console.log('🔄 Apakah selectedRackId === rackId?', selectedRackId && selectedRackId.toUpperCase() === rackId);
+                
+                // Cek apakah selectedRackId sudah sesuai dengan rackId
+                // Jika ya, berarti user baru saja mengklik rak baru, jangan reset highlight
+                if (selectedRackId && selectedRackId.toUpperCase() === rackId) {
+                    console.log('🔄 ⚠️ selectedRackId sudah sesuai dengan rackId, cek apakah sudah ter-highlight');
+                    let alreadyHighlighted = false;
+                    allRacks.forEach(rack => {
+                        let currentRackId = rack.getAttribute('data-rack-id');
+                        if (currentRackId) {
+                            currentRackId = currentRackId.replace(/^["']+|["']+$/g, '').trim().toUpperCase();
+                        }
+                        if (currentRackId === rackId) {
+                            const computedBg = window.getComputedStyle(rack).backgroundColor;
+                            console.log('🔄 Computed bg untuk rak', currentRackId, ':', computedBg);
+                            // Cek apakah sudah ter-highlight (biru)
+                            if (computedBg.includes('rgb(37, 99, 235)') || computedBg.includes('rgb(37,99,235)')) {
+                                alreadyHighlighted = true;
+                                console.log('🔄 ✅ Rak', currentRackId, 'sudah ter-highlight');
+                            }
+                        }
+                    });
+                    
+                    // Jika sudah ter-highlight dengan benar, skip untuk menghindari reset
+                    if (alreadyHighlighted) {
+                        console.log('🔄 ✅ Rak sudah ter-highlight dengan benar, SKIP untuk menghindari reset');
+                        console.log('🔄 ========================================');
+                        return;
+                    } else {
+                        console.log('🔄 ⚠️ Rak belum ter-highlight, akan di-highlight');
+                    }
+                } else {
+                    console.log('🔄 ⚠️ selectedRackId tidak sesuai atau tidak ada');
+                    console.log('🔄 selectedRackId:', selectedRackId);
+                    console.log('🔄 rackId:', rackId);
+                }
+                
+                // Cek apakah rak sudah ter-highlight dengan benar
+                let alreadyHighlighted = false;
+                allRacks.forEach(rack => {
+                    let currentRackId = rack.getAttribute('data-rack-id');
+                    if (currentRackId) {
+                        currentRackId = currentRackId.replace(/^["']+|["']+$/g, '').trim().toUpperCase();
+                    }
+                    if (currentRackId === rackId) {
+                        const computedBg = window.getComputedStyle(rack).backgroundColor;
+                        // Cek apakah sudah ter-highlight (biru)
+                        if (computedBg.includes('rgb(37, 99, 235)') || computedBg.includes('rgb(37,99,235)')) {
+                            alreadyHighlighted = true;
+                        }
+                    }
+                });
+                
+                // Jika sudah ter-highlight, skip untuk menghindari flicker
+                if (alreadyHighlighted && selectedRackId && selectedRackId.toUpperCase() === rackId) {
+                    console.log('🔄 ✅ Rak sudah ter-highlight dan selectedRackId sesuai, SKIP');
+                    console.log('🔄 ========================================');
+                    return;
+                }
+                
+                console.log('🔄 🎨 Memanggil updateHighlight dengan rackId:', rackId);
+                const oldSelectedRackId = selectedRackId;
+                selectedRackId = rackId;
+                console.log('🔄 selectedRackId di-update dari:', oldSelectedRackId, 'ke:', selectedRackId);
+                updateHighlight(rackId);
+                console.log('🔄 ✅ updateHighlight SELESAI dipanggil');
+            } else {
+                console.log('🔄 ⚠️ Tidak ada match untuk rackId dari value:', currentValue);
+            }
+        } else {
+            console.log('🔄 ⚠️ inputField.value kosong, reset semua highlight');
+            // Jika tidak ada nilai, pastikan tidak ada yang ter-highlight
+            allRacks.forEach(rack => {
+                rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                rack.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                
+                // Reset inline style
+                rack.style.removeProperty('background-color');
+                rack.style.removeProperty('color');
+                rack.style.removeProperty('border-color');
+                rack.style.removeProperty('border-width');
+                rack.style.removeProperty('border-style');
+                rack.style.removeProperty('z-index');
+                rack.style.removeProperty('box-shadow');
+            });
+        }
+        console.log('🔄 ========================================');
+    }
+
+    // Inisialisasi saat pertama kali load (skip jika map di dalam popup yang hidden)
+    const modal = document.getElementById('shelf-map-modal');
+    if (!modal || !modal.classList.contains('hidden')) {
+        // Hanya inisialisasi jika popup tidak ada atau sudah terlihat
+        initializeHighlight();
+    }
+
+    // Listen untuk event custom dari popup handler (untuk reset saat popup dibuka)
+    if (mapContainer) {
+        mapContainer.addEventListener('shelfLocationUpdated', function(e) {
+            console.log('📢 ========================================');
+            console.log('📢 === shelfLocationUpdated EVENT DITERIMA ===');
+            console.log('📢 ========================================');
+            console.log('📢 Timestamp:', new Date().toISOString());
+            console.log('📢 Event detail:', e.detail);
+            console.log('📢 selectedRackId saat ini:', selectedRackId);
+            console.log('📢 inputField.value saat ini:', inputField.value);
+            console.log('📢 Stack trace:', new Error().stack);
+            
+            if (e.detail && e.detail.value) {
+                const oldValue = inputField.value;
+                // Update nilai input field
+                inputField.value = e.detail.value;
+                console.log('📢 Input field di-update dari:', oldValue, 'ke:', e.detail.value);
+                
+                let valueToClean = e.detail.value.replace(/['"]+/g, '').trim();
+                
+                // Pastikan format benar
+                let valueToUse = e.detail.value.trim();
+                if (valueToUse && !valueToUse.match(/^Rak\s+/i)) {
+                    const match = valueToUse.match(/^([A-H][12])$/i);
+                    if (match) {
+                        valueToUse = 'Rak ' + match[1];
+                        inputField.value = valueToUse;
+                        console.log('📢 Format di-normalisasi ke:', valueToUse);
+                    }
+                }
+                
+                // Ekstrak rackId dari value
+                const match = valueToUse.match(/Rak\s*([A-H][12])/i) || valueToUse.match(/^([A-H][12])$/i);
+                const rackIdFromEvent = match && match[1] ? match[1].toUpperCase().trim() : null;
+                console.log('📢 rackId dari event:', rackIdFromEvent);
+                console.log('📢 selectedRackId:', selectedRackId);
+                console.log('📢 Apakah rackIdFromEvent === selectedRackId?', rackIdFromEvent && selectedRackId && rackIdFromEvent === selectedRackId.toUpperCase());
+                
+                // Jika rackId dari event sama dengan selectedRackId, skip untuk menghindari reset
+                if (rackIdFromEvent && selectedRackId && rackIdFromEvent === selectedRackId.toUpperCase()) {
+                    console.log('📢 ⚠️ rackId dari event sama dengan selectedRackId, SKIP initializeHighlight untuk menghindari reset');
+                    console.log('📢 ========================================');
+                    return;
+                }
+                
+                // Gunakan multiple delays untuk memastikan map sudah ter-render
+                console.log('📢 📅 Memanggil initializeHighlight dengan delays: 50, 150, 300, 500ms');
+                [50, 150, 300, 500].forEach(delay => {
+                    setTimeout(function() {
+                        console.log('📢 📅 initializeHighlight dipanggil dengan delay', delay, 'ms');
+                        initializeHighlight();
+                    }, delay);
+                });
+            } else {
+                console.log('📢 ⚠️ Event detail tidak ada atau value kosong, reset highlight');
+                // Jika tidak ada nilai, reset highlight
+                const allRacks = mapContainer.querySelectorAll('[data-rack-id]');
+                allRacks.forEach(rack => {
+                    rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                    rack.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                    rack.style.removeProperty('background-color');
+                    rack.style.removeProperty('color');
+                    rack.style.removeProperty('border-color');
+                    rack.style.removeProperty('border-width');
+                    rack.style.removeProperty('border-style');
+                    rack.style.removeProperty('z-index');
+                    rack.style.removeProperty('box-shadow');
+                });
+            }
+            console.log('📢 ========================================');
+        });
+    }
+
+    // Re-inisialisasi saat popup dibuka (observe modal visibility)
+    if (modal) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const isVisible = !modal.classList.contains('hidden');
+                    if (isVisible) {
+                        // Popup baru dibuka, re-inisialisasi highlight dengan multiple delays
+                        setTimeout(function() {
+                            initializeHighlight();
+                        }, 100);
+                        setTimeout(function() {
+                            initializeHighlight();
+                        }, 300);
+                        setTimeout(function() {
+                            initializeHighlight();
+                        }, 500);
+                    }
+                }
+            });
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // Juga listen untuk event custom 'popupOpened' dari parent dengan delay untuk padding responsif
+    window.addEventListener('shelfMapPopupOpened', function() {
+        // Pastikan nilai input field sudah benar
+        if (inputField && inputField.value) {
+            let valueToUse = inputField.value.trim();
+            if (valueToUse && !valueToUse.match(/^Rak\s+/i)) {
+                const match = valueToUse.match(/^([A-H][12])$/i);
+                if (match) {
+                    valueToUse = 'Rak ' + match[1];
+                    inputField.value = valueToUse;
+                }
+            }
+        }
+        
+        // Gunakan multiple attempts dengan delay lebih lama untuk memastikan padding responsif ter-apply
+        [100, 200, 350, 500, 700, 1000, 1500].forEach(delay => {
+            setTimeout(function() {
+                initializeHighlight();
+            }, delay);
+        });
+    });
+
+    // Listen untuk event force initialize
+    window.addEventListener('forceInitializeHighlight', function(e) {
+        if (e.detail && e.detail.value && inputField) {
+            inputField.value = e.detail.value;
+        }
+        setTimeout(function() {
+            initializeHighlight();
+        }, 100);
+        setTimeout(function() {
+            initializeHighlight();
+        }, 300);
+    });
+
+    // Expose fungsi untuk bisa dipanggil langsung dari luar
+    if (mapContainer) {
+        mapContainer.highlightFromValue = function(value) {
+            // Pastikan input field tersedia
+            const field = document.getElementById(inputFieldId);
+            if (field && value) {
+                field.value = value;
+            }
+            
+            // Pastikan map container tersedia
+            const container = document.getElementById('shelf-map-container');
+            if (!container) return;
+            
+            // Baca nilai dari input field
+            const currentValue = field ? field.value.trim() : '';
+            if (!currentValue) return;
+            
+            // Ekstrak rak ID
+            const match = currentValue.match(/Rak\s*([A-H][12])/i) || currentValue.match(/^([A-H][12])$/i);
+            if (!match || !match[1]) return;
+            
+            const rackId = match[1].toUpperCase();
+            
+            // Cari rak dan highlight
+            const allRacks = container.querySelectorAll('[data-rack-id]');
+            allRacks.forEach(rack => {
+                const currentRackId = rack.getAttribute('data-rack-id');
+                const isSelected = currentRackId && currentRackId.toUpperCase() === rackId;
+                
+                if (isSelected) {
+                    rack.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                    rack.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                    
+                    // Set inline style dengan !important untuk memastikan warna ter-apply
+                    rack.style.setProperty('background-color', '#2563eb', 'important'); // blue-600
+                    rack.style.setProperty('color', '#ffffff', 'important');
+                    rack.style.setProperty('border-color', '#1e3a8a', 'important'); // blue-800
+                    rack.style.setProperty('border-width', '2px', 'important');
+                    rack.style.setProperty('border-style', 'solid', 'important');
+                    rack.style.setProperty('z-index', '10', 'important');
+                    rack.style.setProperty('box-shadow', '0 0 15px rgba(37,99,235,0.6)', 'important');
+                } else {
+                    rack.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'animate-pulse', 'z-10');
+                    rack.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-500/30', 'border');
+                    
+                    // Reset inline style
+                    rack.style.removeProperty('background-color');
+                    rack.style.removeProperty('color');
+                    rack.style.removeProperty('border-color');
+                    rack.style.removeProperty('border-width');
+                    rack.style.removeProperty('border-style');
+                    rack.style.removeProperty('z-index');
+                    rack.style.removeProperty('box-shadow');
+                }
+            });
+            
+            // Update indicator
+            const indicator = document.getElementById('selected-rack-indicator');
+            const label = document.getElementById('selected-rack-label');
+            if (indicator && label) {
+                label.textContent = rackId;
+                indicator.classList.remove('hidden');
+            }
+        };
+    }
+});
+</script>

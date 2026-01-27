@@ -1,0 +1,782 @@
+<%- include('partials/header') %>
+
+<!-- Tom Select CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+
+<div class="w-full px-4 sm:px-6 md:w-[90%] md:mx-auto py-4 md:py-6">
+
+    <main class="w-full">
+            <form action="/search" method="GET">
+            <!-- Mobile: Filter di atas (hidden di desktop) - Compact -->
+            <div class="mb-3 md:hidden">
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    <!-- Header Compact -->
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <i class="fas fa-sliders-h text-blue-600 text-xs"></i>
+                                <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Filter</span>
+                            </div>
+                            <% if (query.q || query.category || query.subject || query.year) { %>
+                                <span class="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold uppercase">Aktif</span>
+                            <% } %>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter Content - Grid Layout untuk Compact -->
+                    <div class="p-3">
+                        <input type="hidden" name="q" value="<%= query.q || '' %>">
+                        <input type="hidden" name="searchBy" value="<%= query.searchBy || 'title' %>">
+                        <input type="hidden" name="matchType" value="<%= query.matchType || 'contains' %>">
+                        <input type="hidden" name="sortBy" value="<%= query.sortBy || 'title' %>" id="filterSortByMobile">
+                        <input type="hidden" name="sortOrder" value="<%= query.sortOrder || 'ASC' %>" id="filterSortOrderMobile">
+                        
+                        <!-- Grid 3 kolom untuk mobile -->
+                        <div class="grid grid-cols-3 gap-2 mb-2">
+                            <div class="min-w-0">
+                                <select name="category" id="categorySelectMobile" class="w-full p-1.5 text-[11px] bg-gray-50 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Semua Kategori</option>
+                                    <% sidebarData.categories.forEach(item => { %>
+                                        <option value="<%= item.id %>" <%= query.category == item.id ? 'selected' : '' %>><%= item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name %></option>
+                                    <% }) %>
+                            </select>
+                        </div>
+
+                            <div class="min-w-0">
+                                <select name="subject" id="subjectSelectMobile" class="w-full p-1.5 text-[11px] bg-gray-50 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Semua Subjek</option>
+                                    <% sidebarData.subjects.forEach(item => { %>
+                                        <option value="<%= item.id %>" <%= query.subject == item.id ? 'selected' : '' %>><%= item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name %></option>
+                                    <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="min-w-0">
+                                <select name="year" id="yearSelectMobile" class="w-full p-1.5 text-[11px] bg-gray-50 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Semua Tahun</option>
+                                    <% sidebarData.years.forEach(item => { %>
+                                        <option value="<%= item.year %>" <%= query.year == item.year ? 'selected' : '' %>><%= item.year %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons - Compact -->
+                        <div class="flex gap-2">
+                            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3 py-1.5 rounded-md font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-filter text-[10px]"></i> <span>Terapkan</span>
+                            </button>
+                            <a href="/" class="px-3 py-1.5 text-xs text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md transition flex items-center gap-1 border border-gray-200">
+                                <i class="fas fa-undo text-[10px]"></i> <span>Reset</span>
+                            </a>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Desktop Layout: Flex container dengan sidebar dan main content -->
+            <div class="flex flex-col md:flex-row md:gap-6 md:items-start">
+                
+                <!-- Sidebar Filter (Desktop only) -->
+                <aside class="hidden md:block md:w-64 md:flex-shrink-0 md:sticky md:top-6">
+                <div class="bg-white p-5 rounded-xl border border-blue-100 shadow-sm">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-sliders-h text-blue-600 mr-2 text-sm"></i>
+                        <span class="text-sm font-bold text-gray-700 uppercase tracking-wider">Filter Koleksi</span>
+                    </div>
+                    
+                        <div class="space-y-3">
+                            <input type="hidden" name="q" value="<%= query.q || '' %>">
+                            <input type="hidden" name="searchBy" value="<%= query.searchBy || 'title' %>">
+                            <input type="hidden" name="matchType" value="<%= query.matchType || 'contains' %>">
+                            <input type="hidden" name="sortBy" value="<%= query.sortBy || 'title' %>" id="filterSortBy">
+                            <input type="hidden" name="sortOrder" value="<%= query.sortOrder || 'ASC' %>" id="filterSortOrder">
+                        <div class="min-w-0">
+                            <select name="category" id="categorySelect" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                                <option value="">Semua Kategori</option>
+                                <% sidebarData.categories.forEach(item => { %>
+                                    <option value="<%= item.id %>" <%= query.category == item.id ? 'selected' : '' %>><%= item.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="min-w-0">
+                            <select name="subject" id="subjectSelect" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                                <option value="">Semua Subjek</option>
+                                <% sidebarData.subjects.forEach(item => { %>
+                                    <option value="<%= item.id %>" <%= query.subject == item.id ? 'selected' : '' %>><%= item.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="min-w-0">
+                            <select name="year" id="yearSelect" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg">
+                                <option value="">Semua Tahun</option>
+                                <% sidebarData.years.forEach(item => { %>
+                                    <option value="<%= item.year %>" <%= query.year == item.year ? 'selected' : '' %>><%= item.year %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="min-w-0">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2">
+                                <i class="fas fa-filter text-xs"></i> Terapkan Filter
+                            </button>
+                        </div>
+                            
+                            <div class="mt-3 flex flex-col gap-3">
+                                <div class="text-xs text-gray-500">
+                                    <a href="/" class="hover:text-blue-600 transition"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
+                        </div>
+                        <% if (query.q || query.category || query.subject || query.year) { %>
+                                    <span class="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-bold uppercase inline-block">Filter Aktif</span>
+                        <% } %>
+                    </div>
+                    </div>
+                </div>
+                </aside>
+
+                <!-- Main Content Area -->
+                <div class="flex-1 flex flex-col md:min-h-0">
+                    <!-- Search Section (Static) - Compact untuk Mobile -->
+                    <div class="bg-white rounded-lg border border-gray-200 shadow-sm mb-3 sm:mb-4 flex-shrink-0 overflow-hidden">
+                        <!-- Header Compact -->
+                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 border-b border-gray-200 md:hidden">
+                            <div class="flex items-center gap-1.5">
+                                <i class="fas fa-search text-blue-600 text-xs"></i>
+                                <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Pencarian</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-3 sm:p-4 md:p-6">
+                            <!-- Desktop Header -->
+                            <h2 class="hidden md:flex text-lg font-bold text-gray-800 mb-4 items-center">
+                                <i class="fas fa-search text-blue-600 mr-2 text-base"></i> <span>Pencarian Koleksi</span>
+                            </h2>
+                            
+                            <!-- Search Form - Compact untuk Mobile -->
+                            <div class="flex flex-col sm:flex-row gap-2 sm:gap-2">
+                                <!-- Search Input -->
+                                <div class="flex-grow min-w-0">
+                                    <input type="text" name="q" value="<%= query.q || '' %>"
+                                        class="w-full p-2 sm:p-2.5 text-xs sm:text-sm md:text-base border border-gray-300 rounded-md sm:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder:text-gray-400"
+                                        placeholder="Cari buku...">
+                                </div>
+
+                                <!-- Search By - Compact -->
+                                <div class="w-full sm:w-auto sm:min-w-[120px] md:min-w-[140px]">
+                                    <select name="searchBy" class="w-full p-2 sm:p-2.5 text-xs sm:text-sm md:text-base bg-gray-50 border border-gray-300 rounded-md sm:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="title" <%= query.searchBy === 'title' ? 'selected' : '' %>>Judul</option>
+                                        <option value="author" <%= query.searchBy === 'author' ? 'selected' : '' %>>Pengarang</option>
+                                        <option value="publisher" <%= query.searchBy === 'publisher' ? 'selected' : '' %>>Penerbit</option>
+                                        <option value="subject" <%= query.searchBy === 'subject' ? 'selected' : '' %>>Subjek</option>
+                                    </select>
+                                </div>
+
+                                <!-- Match Type - Compact -->
+                                <div class="w-full sm:w-auto sm:min-w-[140px] md:min-w-[160px]">
+                                    <select name="matchType" class="w-full p-2 sm:p-2.5 text-xs sm:text-sm md:text-base bg-gray-50 border border-gray-300 rounded-md sm:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="contains" <%= query.matchType === 'contains' ? 'selected' : '' %>>Salah Satu Isi</option>
+                                        <option value="startsWith" <%= query.matchType === 'startsWith' ? 'selected' : '' %>>Dimulai Dengan</option>
+                                        <option value="endsWith" <%= query.matchType === 'endsWith' ? 'selected' : '' %>>Diakhiri Dengan</option>
+                                        <option value="exact" <%= query.matchType === 'exact' ? 'selected' : '' %>>Tepat (Exact)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Search Button - Compact -->
+                                <div class="w-full sm:w-auto sm:min-w-[80px] md:min-w-[100px]">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 rounded-md sm:rounded-lg font-semibold sm:font-bold w-full sm:w-auto transition shadow-sm text-xs sm:text-sm md:text-base flex items-center justify-center gap-1.5">
+                                        <i class="fas fa-search text-[10px] sm:text-xs"></i> <span>Cari</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sorting Options - Di dalam box, di bawah search form -->
+                            <div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+                                <!-- Mobile: Compact Layout -->
+                                <div class="block sm:hidden">
+                                    <label class="text-[11px] font-semibold text-gray-700 flex items-center mb-2">
+                                        <i class="fas fa-sort text-blue-600 mr-1.5 text-[10px]"></i> 
+                                        <span>Urutkan:</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select id="sortByMobile" class="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-md text-[11px] focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition" onchange="window.applySorting()">
+                                            <option value="title" <%= (!query.sortBy || query.sortBy === 'title') ? 'selected' : '' %>>Judul (A-Z)</option>
+                                            <option value="updatedAt" <%= query.sortBy === 'updatedAt' ? 'selected' : '' %>>Terakhir Diupdate</option>
+                                            <option value="createdAt" <%= query.sortBy === 'createdAt' ? 'selected' : '' %>>Terakhir Ditambahkan</option>
+                                        </select>
+                                        <button 
+                                            type="button" 
+                                            id="sortOrderToggleMobile" 
+                                            class="w-full px-2 py-1.5 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 border border-gray-300 rounded-md text-[11px] transition shadow-sm flex items-center justify-center gap-1"
+                                            onclick="window.toggleSortOrder()"
+                                            data-order="<%= query.sortOrder || 'ASC' %>"
+                                            title="Klik untuk mengubah urutan"
+                                        >
+                                            <i id="sortOrderIconMobile" class="fas <%= (query.sortOrder || 'ASC') === 'DESC' ? 'fa-sort-amount-down' : 'fa-sort-amount-up' %> text-blue-600 text-[10px]"></i>
+                                            <span id="sortOrderTextMobile" class="text-[11px]"><%= (query.sortOrder || 'ASC') === 'DESC' ? 'Turun' : 'Naik' %></span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Desktop: Horizontal Layout -->
+                                <div class="hidden sm:flex sm:items-center sm:justify-between sm:gap-3">
+                                    <label class="text-xs md:text-sm font-semibold text-gray-700 flex items-center flex-shrink-0">
+                                        <i class="fas fa-sort text-blue-600 mr-2 text-xs md:text-sm"></i> 
+                                        <span class="text-xs md:text-sm">Urutkan Berdasarkan:</span>
+                                    </label>
+                                    <div class="flex gap-2 items-center flex-shrink-0">
+                                        <select id="sortByDesktop" class="px-3 md:px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" style="min-width: 140px;" onchange="window.applySorting()">
+                                            <option value="title" <%= (!query.sortBy || query.sortBy === 'title') ? 'selected' : '' %>>Judul (A-Z)</option>
+                                            <option value="updatedAt" <%= query.sortBy === 'updatedAt' ? 'selected' : '' %>>Terakhir Diupdate</option>
+                                            <option value="createdAt" <%= query.sortBy === 'createdAt' ? 'selected' : '' %>>Terakhir Ditambahkan</option>
+                                        </select>
+                                        <button 
+                                            type="button" 
+                                            id="sortOrderToggleDesktop" 
+                                            class="px-3 md:px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-xs md:text-sm transition shadow-sm flex items-center gap-2 justify-center whitespace-nowrap"
+                                            style="min-width: 100px;"
+                                            onclick="window.toggleSortOrder()"
+                                            data-order="<%= query.sortOrder || 'ASC' %>"
+                                            title="Klik untuk mengubah urutan"
+                                        >
+                                            <i id="sortOrderIconDesktop" class="fas <%= (query.sortOrder || 'ASC') === 'DESC' ? 'fa-sort-amount-down' : 'fa-sort-amount-up' %> text-blue-600 text-xs md:text-sm"></i>
+                                            <span id="sortOrderTextDesktop" class="text-xs md:text-sm"><%= (query.sortOrder || 'ASC') === 'DESC' ? 'Turun' : 'Naik' %></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+        </div>
+
+                    <!-- Product Container (Scrollable) -->
+                    <div class="flex-1 md:overflow-y-auto md:max-h-[calc(100vh-250px)] md:pr-2">
+            <!-- LIST BUKU -->
+            <div class="space-y-4">
+                <% if (books.length > 0) { %>
+                    <% books.forEach(book => { %>
+                        <a 
+                                        href="/book/<%= book.id %>?origin_q=<%= query.q %>&origin_searchBy=<%= query.searchBy %>&origin_matchType=<%= query.matchType %>&origin_category=<%= query.category %>&origin_subject=<%= query.subject %>&origin_year=<%= query.year %>&origin_sortBy=<%= query.sortBy %>&origin_sortOrder=<%= query.sortOrder %>&origin_page=<%= currentPage %>"
+                                        class="block bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 flex flex-row gap-3 group cursor-pointer active:scale-[0.98] overflow-hidden sm:rounded-lg sm:border-gray-200 sm:hover:border-blue-400 sm:hover:shadow-md sm:transition sm:active:scale-100 sm:p-4 sm:gap-4 p-3"
+                            >
+                                        <!-- Cover - Compact untuk mobile, normal untuk desktop -->
+                                        <div class="w-16 h-20 sm:w-24 sm:h-32 bg-gradient-to-br from-gray-50 to-gray-100 sm:bg-gray-100 rounded-lg sm:rounded border border-gray-200 sm:border overflow-hidden flex justify-center items-center flex-shrink-0 shadow-sm sm:shadow-none">
+                                <% if (book.image) { %>
+                                                <img src="<%= book.image_full_path %>" class="w-full h-full object-cover sm:object-contain" alt="<%= book.title %>">
+                                <% } else { %>
+                                                <div class="flex flex-col justify-center items-center p-1 sm:p-2">
+                                                    <i class="fas fa-book text-lg sm:text-3xl mb-0.5 sm:mb-1 text-gray-400"></i>
+                                                    <span class="text-[7px] sm:text-[9px] text-center text-gray-500 leading-tight hidden sm:block">SAMPUL BELUM TERSEDIA</span>
+                                    </div>
+                                <% } %>
+                            </div>
+
+                                        <!-- Info - Compact layout untuk mobile, normal untuk desktop -->
+                                        <div class="flex-grow text-xs sm:text-sm min-w-0 flex flex-col">
+                                            <h4 class="text-sm sm:text-base font-bold text-blue-700 group-hover:text-blue-800 sm:group-hover:text-blue-700 group-hover:underline cursor-pointer mb-1.5 sm:mb-2 line-clamp-2 leading-tight sm:leading-normal"
+                                                onclick="window.location.href='/book/<%= book.id %>?origin_q=<%= query.q %>&origin_searchBy=<%= query.searchBy %>&origin_matchType=<%= query.matchType %>&origin_category=<%= query.category %>&origin_subject=<%= query.subject %>&origin_year=<%= query.year %>&origin_sortBy=<%= query.sortBy %>&origin_sortOrder=<%= query.sortOrder %>&origin_page=<%= currentPage %>'">
+                                    <%= book.title %>
+                            </h4>
+                                            
+                                            <!-- Info Compact untuk Mobile, Grid untuk Desktop -->
+                                            <div class="space-y-1 sm:grid sm:grid-cols-1 sm:gap-y-1 text-gray-600">
+                                                <!-- Kategori -->
+                                                <div class="flex items-start gap-1.5 sm:grid sm:grid-cols-[100px_1fr] sm:gap-0">
+                                                    <span class="font-semibold text-[10px] sm:text-sm text-gray-500 sm:text-gray-600 flex-shrink-0 sm:block">Kategori</span>
+                                                    <span class="text-[10px] sm:text-sm line-clamp-1 sm:line-clamp-none sm:break-words">: <%= book.Category ? book.Category.name : '-' %></span>
+                                                </div>
+                                                
+                                                <!-- Pengarang -->
+                                                <div class="flex items-start gap-1.5 sm:grid sm:grid-cols-[100px_1fr] sm:gap-0">
+                                                    <span class="font-semibold text-[10px] sm:text-sm text-gray-500 sm:text-gray-600 flex-shrink-0 sm:block">Pengarang</span>
+                                                    <span class="text-[10px] sm:text-sm line-clamp-1 sm:line-clamp-none sm:break-words">: <%= book.Authors.map(a => a.name).join(", ") %></span>
+                                                </div>
+                                                
+                                                <!-- Penerbitan -->
+                                                <div class="flex items-start gap-1.5 sm:grid sm:grid-cols-[100px_1fr] sm:gap-0">
+                                                    <span class="font-semibold text-[10px] sm:text-sm text-gray-500 sm:text-gray-600 flex-shrink-0 sm:block">Penerbitan</span>
+                                                    <span class="text-[10px] sm:text-sm line-clamp-1 sm:line-clamp-none sm:break-words">: <%= book.publish_place %> : <%= book.Publishers.map(p => p.name).join(", ") %>, <%= book.publish_year %></span>
+                                                </div>
+                                    </div>
+
+                                            <!-- Stock Section Mobile - Di bawah penerbitan (hanya untuk mobile) -->
+                                            <div class="mt-2 pt-2 border-t border-gray-100 sm:hidden">
+                                                <!-- Stock Badge -->
+                                                <div class="flex items-center gap-2 mb-1.5">
+                                                    <span class="text-[9px] font-semibold text-gray-500">Ketersediaan:</span>
+                                                    <span class="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">
+                                                        <%= book.total_exemplars || 0 %> eksemplar
+                                                    </span>
+                                                </div>
+
+                                                <!-- Call Number Badge -->
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[9px] rounded-md border border-gray-200 font-mono truncate max-w-full">
+                                                        <%= book.call_number %>
+                                                    </span>
+                                                </div>
+                                            </div>
+                            </div>
+
+                                        <!-- Stock Section Desktop - Di samping kanan (hanya untuk desktop) -->
+                                        <div class="hidden sm:block sm:text-right sm:w-40 border-l border-gray-100 pl-4 flex-shrink-0">
+                                            <span class="text-xs font-semibold text-gray-500 block mb-1">Ketersediaan</span>
+                                            <div class="text-xs text-blue-600 font-medium mb-2">
+                                                <%= book.total_exemplars || 0 %> eksemplar
+                                            </div>
+
+                                            <div class="mt-2">
+                                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded border inline-block break-all">
+                                                    <%= book.call_number %>
+                                                </span>
+                                            </div>
+                                        </div>
+                        </a>
+                    <% }) %>
+                <% } else { %>
+                    <div class="p-10 text-center bg-gray-50 border border-dashed border-gray-300 rounded">
+                        <p class="text-gray-500 font-medium">Data tidak ditemukan.</p>
+                    </div>
+                <% } %>
+                        </div>
+            </div>
+
+                    <!-- PAGINATION (Outside scrollable container) -->
+            <% if (totalPages > 1) { %>
+                        <div class="mt-6 sm:mt-8 flex flex-wrap justify-center items-center gap-1 sm:gap-2 flex-shrink-0">
+                    
+                    <% if (currentPage > 1) { %>
+                        <a
+                                    href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= parseInt(currentPage) - 1 %>"
+                                    class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm bg-white text-gray-600 hover:bg-blue-50 active:bg-blue-100 transition"
+                        >
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    <% } %>
+
+                    <% 
+                        let delta = 2; // Menampilkan 2 halaman di kiri dan 2 di kanan active page
+                        let left = parseInt(currentPage) - delta;
+                        let right = parseInt(currentPage) + delta;
+                        let range = [];
+                        let rangeWithDots = [];
+                        let l;
+
+                        for (let i = 1; i <= totalPages; i++) {
+                            if (i == 1 || i == totalPages || (i >= left && i <= right)) {
+                                range.push(i);
+                            }
+                        }
+
+                        for (let i of range) {
+                            if (l) {
+                                if (i - l === 2) {
+                                    rangeWithDots.push(l + 1);
+                                } else if (i - l !== 1) {
+                                    rangeWithDots.push('...');
+                                }
+                            }
+                            rangeWithDots.push(i);
+                            l = i;
+                        }
+                    %>
+
+                    <% rangeWithDots.forEach(i => { %>
+                        <% if (i === '...') { %>
+                                    <span class="px-2 sm:px-3 py-1 text-xs sm:text-sm text-gray-400">...</span>
+                        <% } else { %>
+                            <a 
+                                            href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= i %>"
+                                            class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm transition-colors active:scale-95 <%= currentPage == i ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-gray-600 hover:bg-blue-50' %>">
+                                <%= i %>
+                            </a>
+                        <% } %>
+                    <% }) %>
+
+                    <% if (currentPage < totalPages) { %>
+                        <a
+                                    href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= parseInt(currentPage) + 1 %>"
+                                    class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm bg-white text-gray-600 hover:bg-blue-50 active:bg-blue-100 transition"
+                        >
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    <% } %>
+
+                </div>
+            <% } %>
+                </div>
+            </div>
+        </form>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        // Helper function untuk mendapatkan elemen yang terlihat (visible)
+        function getVisibleElement(...ids) {
+            for (const id of ids) {
+                const element = document.getElementById(id);
+                if (element && element.offsetParent !== null) {
+                    return element;
+                }
+            }
+            // Jika tidak ada yang terlihat, return yang pertama (fallback)
+            return document.getElementById(ids[0]);
+        }
+
+        // Update hidden inputs in filter forms with current sorting values
+        function updateFilterSortingInputs() {
+            // Ambil elemen yang terlihat (mobile atau desktop)
+            const sortBySelect = getVisibleElement('sortByMobile', 'sortByDesktop');
+            const sortOrderToggle = getVisibleElement('sortOrderToggleMobile', 'sortOrderToggleDesktop');
+            
+            if (!sortBySelect) return;
+            
+            const sortByValue = sortBySelect.value || 'title';
+            const sortOrderValue = sortOrderToggle ? (sortOrderToggle.getAttribute('data-order') || 'ASC') : 'ASC';
+            
+            // Update hidden inputs in filter forms (desktop dan mobile)
+            const filterSortBy = document.getElementById('filterSortBy');
+            const filterSortByMobile = document.getElementById('filterSortByMobile');
+            const filterSortOrder = document.getElementById('filterSortOrder');
+            const filterSortOrderMobile = document.getElementById('filterSortOrderMobile');
+            
+            if (filterSortBy) {
+                filterSortBy.value = sortByValue;
+            }
+            if (filterSortByMobile) {
+                filterSortByMobile.value = sortByValue;
+            }
+            if (filterSortOrder) {
+                filterSortOrder.value = sortOrderValue;
+            }
+            if (filterSortOrderMobile) {
+                filterSortOrderMobile.value = sortOrderValue;
+            }
+            
+            // Debug log untuk memastikan update berhasil
+            console.log('Updated filter sorting inputs:', { sortBy: sortByValue, sortOrder: sortOrderValue });
+        }
+
+        // Make functions globally accessible
+        window.applySorting = function() {
+            try {
+                // Ambil elemen yang terlihat (mobile atau desktop)
+                const sortBySelect = getVisibleElement('sortByMobile', 'sortByDesktop');
+                const sortOrderToggle = getVisibleElement('sortOrderToggleMobile', 'sortOrderToggleDesktop');
+                
+                if (!sortBySelect) {
+                    console.error('sortBy element not found');
+                    return;
+                }
+                
+                const sortOrderValue = sortOrderToggle ? (sortOrderToggle.getAttribute('data-order') || 'ASC') : 'ASC';
+                
+                // Update hidden inputs in filter forms before redirect
+                updateFilterSortingInputs();
+                
+                // Get current URL parameters (handle array jika ada)
+                const params = new URLSearchParams(window.location.search);
+                
+                // Helper untuk get parameter (handle array - ambil nilai pertama)
+                const getParam = (key, defaultValue = '') => {
+                    const value = params.get(key);
+                    return value !== null ? value : defaultValue;
+                };
+                
+                // Get nilai filter dari form (prioritas: form > URL)
+                // Ini memastikan filter yang sedang aktif di form tetap terpreserve
+                const getFormValue = (name) => {
+                    // Cari di semua form (mobile dan desktop)
+                    // Prioritas: select > input (karena select adalah filter utama)
+                    const selects = document.querySelectorAll(`select[name="${name}"]`);
+                    for (let select of selects) {
+                        const val = select.value;
+                        if (val && val !== '' && val !== '0') {
+                            return val;
+                        }
+                    }
+                    
+                    // Jika select tidak ada atau kosong, cari input (untuk q, searchBy, matchType)
+                    const inputs = document.querySelectorAll(`input[name="${name}"]`);
+                    for (let input of inputs) {
+                        const val = input.value;
+                        if (val && val !== '') {
+                            return val;
+                        }
+                    }
+                    return '';
+                };
+                
+                // Get semua parameter filter dari form ATAU dari URL (prioritas: form > URL)
+                // Ini memastikan filter yang sedang aktif di form tetap terpreserve saat sorting diubah
+                const formCategory = getFormValue('category');
+                const formSubject = getFormValue('subject');
+                const formYear = getFormValue('year');
+                const formQ = getFormValue('q');
+                
+                const urlParams = {
+                    q: formQ || getParam('q', ''),
+                    searchBy: getFormValue('searchBy') || getParam('searchBy', 'title'),
+                    matchType: getFormValue('matchType') || getParam('matchType', 'contains'),
+                    category: formCategory || getParam('category', ''),
+                    subject: formSubject || getParam('subject', ''),
+                    year: formYear || getParam('year', ''),
+                    page: '1', // Reset page ke 1 saat sorting berubah
+                    sortBy: sortBySelect.value,
+                    sortOrder: sortOrderValue
+                };
+                
+                // Debug: Log nilai dari form
+                console.log('Form values:', { category: formCategory, subject: formSubject, year: formYear, q: formQ });
+                
+                // Debug: Log parameter yang akan dikirim
+                console.log('Applying sorting with preserved filters:', urlParams);
+                
+                // Build URL with all parameters (preserve semua filter)
+                const queryString = Object.keys(urlParams)
+                    .filter(key => {
+                        const value = urlParams[key];
+                        // Include parameter jika tidak kosong atau jika itu adalah page (selalu include page)
+                        return (value !== '' && value !== null && value !== undefined) || key === 'page';
+                    })
+                    .map(key => `${key}=${encodeURIComponent(urlParams[key])}`)
+                    .join('&');
+                
+                // Redirect to new URL dengan semua parameter terpreserve
+                window.location.href = '/search?' + queryString;
+            } catch (e) {
+                console.error('Error applying sorting:', e);
+                alert('Terjadi kesalahan saat mengubah urutan. Silakan coba lagi.');
+            }
+        };
+
+        window.toggleSortOrder = function() {
+            try {
+                // Ambil elemen yang terlihat (mobile atau desktop)
+                const sortOrderToggle = getVisibleElement('sortOrderToggleMobile', 'sortOrderToggleDesktop');
+                const sortOrderIcon = getVisibleElement('sortOrderIconMobile', 'sortOrderIconDesktop');
+                const sortOrderText = getVisibleElement('sortOrderTextMobile', 'sortOrderTextDesktop');
+                
+                if (!sortOrderToggle) {
+                    console.error('sortOrderToggle element not found');
+                    return;
+                }
+                
+                const currentOrder = sortOrderToggle.getAttribute('data-order') || 'ASC';
+                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+                
+                // Update data attribute untuk kedua elemen (mobile dan desktop)
+                const sortOrderToggleMobile = document.getElementById('sortOrderToggleMobile');
+                const sortOrderToggleDesktop = document.getElementById('sortOrderToggleDesktop');
+                if (sortOrderToggleMobile) sortOrderToggleMobile.setAttribute('data-order', newOrder);
+                if (sortOrderToggleDesktop) sortOrderToggleDesktop.setAttribute('data-order', newOrder);
+                
+                // Update icon and text untuk kedua elemen (mobile dan desktop)
+                const sortOrderIconMobile = document.getElementById('sortOrderIconMobile');
+                const sortOrderIconDesktop = document.getElementById('sortOrderIconDesktop');
+                const sortOrderTextMobile = document.getElementById('sortOrderTextMobile');
+                const sortOrderTextDesktop = document.getElementById('sortOrderTextDesktop');
+                
+                // Update mobile elements
+                if (sortOrderIconMobile && sortOrderTextMobile) {
+                    if (newOrder === 'ASC') {
+                        sortOrderIconMobile.className = 'fas fa-sort-amount-up text-blue-600 text-[10px]';
+                        sortOrderTextMobile.textContent = 'Naik';
+                    } else {
+                        sortOrderIconMobile.className = 'fas fa-sort-amount-down text-blue-600 text-[10px]';
+                        sortOrderTextMobile.textContent = 'Turun';
+                    }
+                }
+                
+                // Update desktop elements
+                if (sortOrderIconDesktop && sortOrderTextDesktop) {
+                    if (newOrder === 'ASC') {
+                        sortOrderIconDesktop.className = 'fas fa-sort-amount-up text-blue-600 text-xs md:text-sm';
+                        sortOrderTextDesktop.textContent = 'Naik';
+                    } else {
+                        sortOrderIconDesktop.className = 'fas fa-sort-amount-down text-blue-600 text-xs md:text-sm';
+                        sortOrderTextDesktop.textContent = 'Turun';
+                    }
+                }
+                
+                // Update hidden inputs in filter forms immediately
+                updateFilterSortingInputs();
+                
+                // Visual feedback
+                sortOrderToggle.classList.add('ring-2', 'ring-blue-500');
+                setTimeout(() => {
+                    sortOrderToggle.classList.remove('ring-2', 'ring-blue-500');
+                    // Apply sorting immediately after toggle
+                    window.applySorting();
+                }, 200);
+            } catch (e) {
+                console.error('Error toggling sort order:', e);
+                alert('Terjadi kesalahan saat mengubah urutan. Silakan coba lagi.');
+            }
+        };
+
+        // Desktop selects
+        if (document.getElementById('categorySelect')) {
+        new TomSelect('#categorySelect', {
+            allowEmptyOption: true,
+            placeholder: "Pilih kategori...",
+            dropdownClass: 'z-50 absolute tom-select-dropdown',
+            dropdownParent: 'body',
+            maxItems: 1,
+            maxOptions: null,
+            onInitialize: function() {
+                this.control_input.style.minWidth = '0';
+            }
+        });
+        }
+        
+        if (document.getElementById('subjectSelect')) {
+        new TomSelect('#subjectSelect', {
+            allowEmptyOption: true,
+            placeholder: "Pilih subjek...",
+            dropdownClass: 'z-50 absolute tom-select-dropdown',
+            dropdownParent: 'body',
+            maxItems: 1,
+            maxOptions: null,
+            onInitialize: function() {
+                this.control_input.style.minWidth = '0';
+            }
+        });
+        }
+        
+        if (document.getElementById('yearSelect')) {
+        new TomSelect('#yearSelect', {
+            allowEmptyOption: true,
+            placeholder: "Pilih tahun...",
+            dropdownClass: 'z-50 absolute tom-select-dropdown',
+            dropdownParent: 'body',
+            maxItems: 1,
+            maxOptions: null,
+            onInitialize: function() {
+                this.control_input.style.minWidth = '0';
+            }
+        });
+        }
+
+        // Mobile selects
+        if (document.getElementById('categorySelectMobile')) {
+            new TomSelect('#categorySelectMobile', {
+                allowEmptyOption: true,
+                placeholder: "Pilih kategori...",
+                dropdownClass: 'z-50 absolute tom-select-dropdown',
+                dropdownParent: 'body',
+                maxItems: 1,
+                maxOptions: null,
+                onInitialize: function() {
+                    this.control_input.style.minWidth = '0';
+                }
+            });
+        }
+        
+        if (document.getElementById('subjectSelectMobile')) {
+            new TomSelect('#subjectSelectMobile', {
+                allowEmptyOption: true,
+                placeholder: "Pilih subjek...",
+                dropdownClass: 'z-50 absolute tom-select-dropdown',
+                dropdownParent: 'body',
+                maxItems: 1,
+                maxOptions: null,
+                onInitialize: function() {
+                    this.control_input.style.minWidth = '0';
+                }
+            });
+        }
+        
+        if (document.getElementById('yearSelectMobile')) {
+            new TomSelect('#yearSelectMobile', {
+                allowEmptyOption: true,
+                placeholder: "Pilih tahun...",
+                dropdownClass: 'z-50 absolute tom-select-dropdown',
+                dropdownParent: 'body',
+                maxItems: 1,
+                maxOptions: null,
+                onInitialize: function() {
+                    this.control_input.style.minWidth = '0';
+                }
+            });
+        }
+
+        // Update filter form hidden inputs before form submission
+        // This ensures sorting values are always current when filter is applied
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterForm = document.querySelector('form[action="/search"]');
+            if (filterForm) {
+                filterForm.addEventListener('submit', function(e) {
+                    // Update hidden inputs with current sorting values before submit
+                    // Ini memastikan saat filter diterapkan, sorting tetap terpreserve
+                    updateFilterSortingInputs();
+                });
+            }
+            
+            // Sync sorting inputs dengan nilai dari URL saat page load
+            // Ini memastikan hidden inputs ter-sync dengan sorting yang aktif
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentSortBy = urlParams.get('sortBy') || 'title';
+            const currentSortOrder = urlParams.get('sortOrder') || 'ASC';
+            
+            // Update hidden inputs dengan nilai dari URL
+            const filterSortBy = document.getElementById('filterSortBy');
+            const filterSortByMobile = document.getElementById('filterSortByMobile');
+            const filterSortOrder = document.getElementById('filterSortOrder');
+            const filterSortOrderMobile = document.getElementById('filterSortOrderMobile');
+            
+            if (filterSortBy) filterSortBy.value = currentSortBy;
+            if (filterSortByMobile) filterSortByMobile.value = currentSortBy;
+            if (filterSortOrder) filterSortOrder.value = currentSortOrder;
+            if (filterSortOrderMobile) filterSortOrderMobile.value = currentSortOrder;
+            
+            // Update sorting UI dengan nilai dari URL
+            const sortBySelect = document.getElementById('sortBy');
+            const sortOrderToggle = document.getElementById('sortOrderToggle');
+            
+            if (sortBySelect && sortBySelect.value !== currentSortBy) {
+                sortBySelect.value = currentSortBy;
+            }
+            
+            if (sortOrderToggle) {
+                sortOrderToggle.setAttribute('data-order', currentSortOrder);
+                const sortOrderIcon = document.getElementById('sortOrderIcon');
+                const sortOrderText = document.getElementById('sortOrderText');
+                
+                if (sortOrderIcon && sortOrderText) {
+                    if (currentSortOrder === 'ASC') {
+                        sortOrderIcon.className = 'fas fa-sort-amount-up text-blue-600';
+                        sortOrderText.textContent = 'Naik';
+                    } else {
+                        sortOrderIcon.className = 'fas fa-sort-amount-down text-blue-600';
+                        sortOrderText.textContent = 'Turun';
+                    }
+                }
+            }
+        });
+
+    </script>
+
+    <style>
+        .ts-control {
+            border: 1px solid #d1d5db !important; 
+            border-radius: 0.5rem !important;    
+            padding: 0.5rem 0.75rem !important;
+            background-color: #ffffff !important;
+        }
+        .ts-wrapper.focus .ts-control {
+            border-color: #3b82f6 !important;    
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        .tom-select-dropdown {
+            border-radius: 0.5rem !important;
+            margin-top: 4px !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        }
+    </style>
+
+</div>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,427 @@
+<%- include('partials/header', { title: 'Manajemen Rak', active: 'shelf-management' }) %>
+
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="flex flex-col h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)]"> 
+    
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 sm:mb-4 px-2 pt-2 gap-2 flex-shrink-0">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-map-signs text-blue-600 mr-2"></i>Manajemen Rak
+        </h1>
+        <div class="text-xs sm:text-sm text-gray-600 w-full sm:w-auto">
+            <span class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full font-bold transition-all block text-center sm:inline" id="selected-count-badge">
+                0 buku dipilih
+            </span>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-3 sm:gap-4 h-full overflow-hidden px-2 pb-2">
+        
+        <div class="w-full h-[45%] lg:h-full lg:w-1/3 flex flex-col bg-white rounded-xl shadow border border-gray-200 order-1">
+            
+            <div class="p-3 border-b border-gray-200 bg-gray-50 rounded-t-xl flex-shrink-0">
+                <form action="/admin/shelf-management" method="GET" class="space-y-2" id="filterForm">
+                    <div class="relative">
+                        <input type="text" name="q" value="<%= query.q || '' %>" 
+                            placeholder="Cari Judul, ISBN, No. Induk..." 
+                            class="w-full pl-8 pr-2 py-1.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm placeholder-gray-400">
+                        <i class="fas fa-search absolute left-3 top-2 text-gray-400 text-xs sm:text-sm"></i>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <select name="category" class="w-full p-1.5 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Semua Kategori</option>
+                            <% categories.forEach(c => { %>
+                                <option value="<%= c.id %>" <%= query.category == c.id ? 'selected' : '' %>><%= c.name %></option>
+                            <% }) %>
+                        </select>
+
+                        <select name="shelf" class="w-full p-1.5 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-700">
+                            <option value="">Semua Lokasi</option>
+                            <option value="unassigned" <%= query.shelf === 'unassigned' ? 'selected' : '' %> class="text-red-600 font-bold bg-red-50">
+                                ⚠️ Kosong
+                            </option>
+                            <option disabled>──────────</option>
+                            <% shelves.forEach(s => { %>
+                                <option value="<%= s %>" <%= query.shelf === s ? 'selected' : '' %>><%= s %></option>
+                            <% }) %>
+                        </select>
+
+                        <select name="subject" class="w-full p-1.5 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Semua Subjek</option>
+                            <% subjects.forEach(s => { %>
+                                <option value="<%= s.id %>" <%= query.subject == s.id ? 'selected' : '' %>><%= s.name %></option>
+                            <% }) %>
+                        </select>
+
+                        <select name="year" class="w-full p-1.5 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Semua Tahun</option>
+                            <% years.forEach(y => { %>
+                                <option value="<%= y %>" <%= query.year == y ? 'selected' : '' %>><%= y %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button type="submit" class="flex-1 bg-blue-600 text-white px-2 py-1.5 rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-1 transition shadow-sm">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <% if (query.q || query.category || query.subject || query.year || query.shelf) { %>
+                            <a href="/admin/shelf-management" class="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 flex items-center justify-center text-xs" title="Reset">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        <% } %>
+                    </div>
+                </form>
+
+                <div class="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="check-all" class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4 border-gray-300 mr-2 cursor-pointer">
+                        <label for="check-all" class="text-xs font-bold text-gray-600 uppercase cursor-pointer select-none">
+                            Pilih Semua (<%= pagination.totalItems %>)
+                        </label>
+                    </div>
+                    <span class="text-[10px] text-gray-600 font-bold bg-gray-200 px-2 py-0.5 rounded border border-gray-300">
+                        Total: <%= pagination.totalItems %>
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-2 space-y-2 relative bg-gray-50 scrollbar-thin" id="book-list-container">
+                <% if (books.length === 0) { %>
+                    <div class="text-center p-8 text-gray-500 flex flex-col items-center justify-center h-full">
+                        <i class="fas fa-box-open text-3xl mb-2 text-gray-300"></i>
+                        <p class="text-sm">Tidak ada buku.</p>
+                    </div>
+                <% } else { %>
+                    <% books.forEach(book => { %>
+                        <div class="book-item bg-white p-2 sm:p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow flex gap-3 items-start group cursor-pointer" onclick="toggleBookCheck('<%= book.id %>')">
+                            <div class="pt-1 flex-shrink-0">
+                                <input type="checkbox" name="bookIds" value="<%= book.id %>" 
+                                    class="book-checkbox rounded text-blue-600 focus:ring-blue-500 h-4 w-4 border-gray-300 cursor-pointer"
+                                    onclick="event.stopPropagation()">
+                            </div>
+                            
+                            <div class="w-8 h-10 flex-shrink-0 hidden sm:flex items-center justify-center bg-gray-100 rounded border border-gray-200 overflow-hidden">
+                                <% if(book.image) { %>
+                                    <img src="/image/uploads/<%= book.image %>" class="w-full h-full object-cover">
+                                <% } else { %>
+                                    <div class="text-[8px] font-bold text-gray-400 text-center leading-none">NO<br>COVER</div>
+                                <% } %>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-semibold text-gray-800 text-xs sm:text-sm line-clamp-2 leading-tight mb-1"><%= book.title %></h4>
+                                <div class="flex flex-wrap justify-between items-end gap-1">
+                                    <div class="text-[10px] sm:text-xs text-gray-500">
+                                        <div><i class="fas fa-barcode text-gray-400 mr-1"></i> <%= book.call_number %></div>
+                                    </div>
+                                    <div class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 shelf-badge whitespace-nowrap" id="shelf-display-<%= book.id %>">
+                                        <i class="fas fa-map-marker-alt mr-1"></i> <%= book.shelf_location || '?' %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } %>
+            </div>
+
+            <% if (pagination.totalPages > 1) { %>
+                <div class="p-2 border-t border-gray-200 bg-white flex justify-center items-center gap-1 flex-shrink-0 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-10 text-xs">
+                    <% 
+                        const buildUrl = (p) => {
+                            const params = new URLSearchParams(query);
+                            params.set('page', p);
+                            return `?${params.toString()}`;
+                        }
+                        const current = pagination.currentPage;
+                        const total = pagination.totalPages;
+                    %>
+                    <a href="<%= current > 1 ? buildUrl(current - 1) : '#' %>" 
+                       class="px-2 py-1 rounded border <%= current > 1 ? 'bg-white hover:bg-gray-50 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed' %>">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    <span class="font-bold text-gray-700 px-2">
+                        <%= current %> / <%= total %>
+                    </span>
+                    <a href="<%= current < total ? buildUrl(current + 1) : '#' %>" 
+                       class="px-2 py-1 rounded border <%= current < total ? 'bg-white hover:bg-gray-50 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed' %>">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="w-full flex-1 lg:h-full lg:w-2/3 bg-white rounded-xl shadow border border-gray-200 flex flex-col overflow-hidden order-2">
+            <div class="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-gray-700 text-sm sm:text-base"><i class="fas fa-map mr-2 text-blue-500"></i>Peta Rak</h3>
+                <div class="flex gap-2">
+                    <button onclick="zoomMap(0.1)" class="w-7 h-7 bg-white rounded shadow text-gray-600 hover:text-blue-600 flex items-center justify-center border border-gray-300"><i class="fas fa-plus text-xs"></i></button>
+                    <button onclick="resetZoom()" class="w-7 h-7 bg-white rounded shadow text-gray-600 hover:text-blue-600 flex items-center justify-center border border-gray-300 font-bold text-[10px]">RST</button>
+                    <button onclick="zoomMap(-0.1)" class="w-7 h-7 bg-white rounded shadow text-gray-600 hover:text-blue-600 flex items-center justify-center border border-gray-300"><i class="fas fa-minus text-xs"></i></button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-auto p-4 bg-gray-100 flex items-center justify-center relative cursor-move" id="map-scroll-container">
+                <div id="map-transform-wrapper" class="min-w-[600px] lg:min-w-full transform scale-100 origin-center transition-transform duration-200">
+                    <%- include('partials/shelfMapInteractive', { inputFieldId: null, isPopup: false }) %>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // === DATA & STATE ===
+    const totalItems = parseInt('<%= pagination.totalItems %>') || 0;
+    const currentUrlParams = new URLSearchParams(window.location.search);
+    
+    // Filter Object untuk Select All
+    const filterParamsObj = {
+        q: currentUrlParams.get('q') || '',
+        category: currentUrlParams.get('category') || '',
+        subject: currentUrlParams.get('subject') || '',
+        year: currentUrlParams.get('year') || '',
+        shelf: currentUrlParams.get('shelf') || ''
+    };
+
+    const checkAllBox = document.getElementById('check-all');
+    const bookCheckboxes = document.querySelectorAll('.book-checkbox');
+    const countBadge = document.getElementById('selected-count-badge');
+    let isSelectAllDatabase = false;
+
+    // === ZOOM LOGIC ===
+    let currentScale = 1.0;
+    const mapWrapper = document.getElementById('map-transform-wrapper');
+    const mapScrollContainer = document.getElementById('map-scroll-container');
+    
+    window.addEventListener('load', () => {
+        if (mapScrollContainer && mapWrapper) {
+            // Center map
+            mapScrollContainer.scrollLeft = (mapScrollContainer.scrollWidth - mapScrollContainer.clientWidth) / 2;
+            mapScrollContainer.scrollTop = (mapScrollContainer.scrollHeight - mapScrollContainer.clientHeight) / 2;
+        }
+        // Auto zoom-out sedikit di mobile
+        if (window.innerWidth < 1024) {
+            currentScale = 0.7; 
+            updateZoom();
+        }
+    });
+
+    function zoomMap(delta) {
+        currentScale += delta;
+        if (currentScale < 0.3) currentScale = 0.3;
+        if (currentScale > 3.0) currentScale = 3.0;
+        updateZoom();
+    }
+
+    function resetZoom() {
+        currentScale = 1.0;
+        updateZoom();
+    }
+
+    function updateZoom() {
+        if(mapWrapper) {
+            mapWrapper.style.transform = `scale(${currentScale})`;
+        }
+    }
+
+    // === 1. LOGIKA SELEKSI ===
+    function updateSelectionUI() {
+        const checkedOnPage = document.querySelectorAll('.book-checkbox:checked').length;
+
+        if (isSelectAllDatabase) {
+            countBadge.innerHTML = `<i class="fas fa-check-double mr-1"></i> <b>${totalItems}</b> buku (Semua)`;
+            countBadge.classList.replace('bg-blue-100', 'bg-green-100');
+            countBadge.classList.replace('text-blue-800', 'text-green-800');
+        } else {
+            countBadge.innerHTML = `${checkedOnPage} buku dipilih`;
+            countBadge.classList.replace('bg-green-100', 'bg-blue-100');
+            countBadge.classList.replace('text-green-800', 'text-blue-800');
+        }
+    }
+
+    if (checkAllBox) {
+        checkAllBox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            bookCheckboxes.forEach(cb => cb.checked = isChecked);
+            isSelectAllDatabase = isChecked; // Langsung anggap pilih semua data filter
+            updateSelectionUI();
+        });
+    }
+
+    bookCheckboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (isSelectAllDatabase && !cb.checked) {
+                isSelectAllDatabase = false;
+                checkAllBox.checked = false; 
+            }
+            updateSelectionUI();
+        });
+    });
+
+    window.toggleBookCheck = function(id) {
+        const cb = document.querySelector(`.book-checkbox[value="${id}"]`);
+        if (cb) {
+            cb.checked = !cb.checked;
+            cb.dispatchEvent(new Event('change'));
+        }
+    };
+
+    // === 2. LOGIKA MAP & HIGHLIGHT ===
+    
+    document.addEventListener("DOMContentLoaded", () => {
+        const mapContainer = document.getElementById('shelf-map-container');
+        if (mapContainer) {
+            const racks = mapContainer.querySelectorAll('[data-rack-id]');
+            
+            racks.forEach(rack => {
+                rack.style.cursor = 'pointer';
+                rack.title = "Klik untuk memindahkan buku terpilih ke sini";
+                
+                rack.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // === A. RESET SEMUA WARNA RAK DULU ===
+                    resetAllRacksColors(racks);
+
+                    // === B. AMBIL ID RAK ===
+                    const rackIdRaw = this.getAttribute('data-rack-id');
+                    let selectedRack = rackIdRaw;
+                    if (selectedRack && !selectedRack.toLowerCase().startsWith('rak')) {
+                        if (selectedRack.match(/^[A-H][12]$/i)) {
+                            selectedRack = "Rak " + selectedRack.toUpperCase();
+                        }
+                    }
+
+                    // === C. HIGHLIGHT RAK YANG DIKLIK (SEMENTARA) ===
+                    highlightRack(this);
+                    
+                    // === D. PROSES SELEKSI BUKU ===
+                    handleRackSelection(selectedRack, this, racks);
+                });
+            });
+        }
+    });
+
+    // Fungsi Helper: Reset Warna
+    function resetAllRacksColors(racksNodeList) {
+        racksNodeList.forEach(r => {
+            r.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'z-10', 'shadow-lg');
+            r.classList.add('bg-gray-300', 'text-gray-700'); 
+            // Hapus inline style paksa jika ada
+            r.style.removeProperty('background-color');
+            r.style.removeProperty('color');
+            r.style.removeProperty('border-color');
+        });
+    }
+
+    // Fungsi Helper: Highlight Satu Rak
+    function highlightRack(element) {
+        element.classList.remove('bg-gray-300', 'text-gray-700');
+        element.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'border-2', 'z-10', 'shadow-lg');
+    }
+
+    function handleRackSelection(selectedRack, rackElement, allRacks) {
+        const checkedOnPage = document.querySelectorAll('.book-checkbox:checked').length;
+
+        // 1. VALIDASI: Jika tidak ada buku dipilih
+        if (checkedOnPage === 0 && !isSelectAllDatabase) {
+            // === KEMBALIKAN WARNA KE ABU-ABU ===
+            // Reset langsung (dengan sedikit delay agar user lihat kliknya)
+            setTimeout(() => {
+                resetAllRacksColors(allRacks);
+            }, 300);
+
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'warning',
+                title: 'Pilih buku terlebih dahulu!'
+            });
+            return;
+        }
+
+        // 2. KONFIRMASI
+        let confirmHtml = "";
+        if (isSelectAllDatabase) {
+            confirmHtml = `Pindahkan <b>SEMUA ${totalItems} BUKU</b> (hasil filter) ke <span class="font-bold text-blue-600">${selectedRack}</span>?`;
+        } else {
+            confirmHtml = `Pindahkan <b>${checkedOnPage}</b> buku terpilih ke <span class="font-bold text-blue-600">${selectedRack}</span>?`;
+        }
+
+        Swal.fire({
+            title: 'Konfirmasi Pindah',
+            html: confirmHtml,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performUpdate(selectedRack);
+            } else {
+                // === JIKA BATAL, KEMBALIKAN WARNA ===
+                resetAllRacksColors(allRacks);
+            }
+        });
+    }
+
+    async function performUpdate(newLocation) {
+        Swal.fire({ 
+            title: 'Memproses...', 
+            allowOutsideClick: false, 
+            didOpen: () => Swal.showLoading() 
+        });
+
+        const manualIds = Array.from(document.querySelectorAll('.book-checkbox:checked')).map(cb => cb.value);
+
+        try {
+            const payload = {
+                newLocation: newLocation,
+                isSelectAll: isSelectAllDatabase,
+                bookIds: isSelectAllDatabase ? [] : manualIds,
+                filterParams: isSelectAllDatabase ? filterParamsObj : null
+            };
+
+            const response = await fetch('/admin/shelf-management/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Selesai!',
+                    text: result.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Gagal', error.message || 'Error.', 'error');
+        }
+    }
+</script>
+
+<%- include('partials/footer') %>
