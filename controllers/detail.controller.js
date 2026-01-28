@@ -8,7 +8,8 @@ const {
     BookAuthor,
     BookPublisher,
     BookSubject,
-    BookCopy
+    BookCopy,
+    BookView
 } = require("../models");
 const QRCode = require("qrcode");
 
@@ -16,7 +17,9 @@ module.exports = {
     async getDetailPage(req, res) {
         try {
             const bookId = req.params.id;
-
+            await BookView.create({ book_id: bookId }).catch(err => {
+                console.error("Gagal mencatat statistik:", err);
+            });
             // ================================
             // 1. Ambil Data Buku Lengkap
             // ================================

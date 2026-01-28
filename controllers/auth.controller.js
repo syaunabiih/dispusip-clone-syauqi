@@ -30,7 +30,7 @@ const loginAction = async (req, res) => {
         req.session.username = user.username;
 
         // Redirect ke halaman admin
-        res.redirect("/admin/books");
+        res.redirect("/admin/dashboard");
     } catch (err) {
         console.error("Login error:", err);
         res.render("admin/login", { error: "Terjadi kesalahan server" });

@@ -57,6 +57,11 @@ module.exports = (sequelize, DataTypes) => {
             foreignKey: 'book_id',
             timestamps: true
         });
+
+        Book.hasMany(models.BookView, { 
+            foreignKey: 'book_id',
+            as: 'views' 
+        });
     };
 
     return Book;

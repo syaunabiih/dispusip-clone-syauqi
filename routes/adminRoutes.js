@@ -19,7 +19,7 @@ const uploadExcel = multer({ storage: storage });
 // =========================
 
 router.get("/", (req, res) => {
-    res.redirect("/admin/login");
+    res.redirect("/admin/dashboard"); 
 });
 
 router.get("/login", loginPage);
@@ -31,6 +31,8 @@ router.get("/logout", logoutAction);
 // =========================
 // Middleware ini akan melindungi semua route di bawahnya
 router.use(isAdminLoggedIn);
+
+router.get("/dashboard", adminBookController.getDashboard);
 
 // =========================
 // LIST BUKU

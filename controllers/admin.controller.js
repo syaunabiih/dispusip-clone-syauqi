@@ -1,4 +1,4 @@
-const { Book, Category, Author, Publisher, Subject, BookCopy, Sequelize } = require("../models");
+const { Book, Category, Author, Publisher, Subject, BookCopy, BookView, sequelize, Sequelize } = require("../models");
 const { Op } = require("sequelize");
 const ExcelJS = require('exceljs');
 
@@ -210,6 +210,98 @@ const standardizeShelfLocation = (rawLocation) => {
 
 
 module.exports = {
+    getDashboard: async (req, res) => {
+        try {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            
+            // 1. Logika Tahun Dinamis
+            const startYear = 2024; 
+            const years = [];
+            for (let y = startYear; y <= currentYear + 1; y++) {
+                years.push(y);
+            }
+
+            const selectedYear = parseInt(req.query.year) || currentYear;
+            const selectedQuarter = parseInt(req.query.quarter) || Math.floor((now.getMonth() + 3) / 3);
+
+            // 2. Tentukan Rentang Tanggal
+            const startMonth = (selectedQuarter - 1) * 3 + 1;
+            const endMonth = startMonth + 2;
+            const startDateStr = `${selectedYear}-${String(startMonth).padStart(2, '0')}-01 00:00:00`;
+            const endDateStr = `${selectedYear}-${String(endMonth).padStart(2, '0')}-${new Date(selectedYear, endMonth, 0).getDate()} 23:59:59`;
+
+            // 3. Query Tren Mingguan (Line Chart)
+            const statsRaw = await BookView.findAll({
+                attributes: [
+                    [Sequelize.fn('WEEK', Sequelize.col('createdAt'), 3), 'week_number'],
+                    [Sequelize.fn('COUNT', Sequelize.col('id')), 'total_views']
+                ],
+                where: { createdAt: { [Op.gte]: startDateStr, [Op.lte]: endDateStr } },
+                group: ['week_number'],
+                order: [[Sequelize.literal('week_number'), 'ASC']],
+                raw: true
+            });
+
+            // Helper mingguan
+            const stats = [];
+            const startWeekResult = await sequelize.query(`SELECT WEEK(:sd, 3) as w`, { replacements: { sd: startDateStr }, type: Sequelize.QueryTypes.SELECT });
+            const startWeek = startWeekResult[0].w;
+            for (let i = 0; i < 13; i++) {
+                const targetWeek = startWeek + i;
+                const found = statsRaw.find(s => parseInt(s.week_number) === targetWeek);
+                stats.push({ week: `Mngu ${i + 1}`, views: found ? parseInt(found.total_views) : 0 });
+            }
+
+            // 4. Query Kategori Terpopuler (Hanya yang pernah diklik)
+            const allVisitedCategories = await Category.findAll({
+                attributes: ['name', [Sequelize.fn('COUNT', Sequelize.col('Books->views.id')), 'viewCount']],
+                include: [{
+                    model: Book, attributes: [], required: true,
+                    include: [{ model: BookView, as: 'views', attributes: [], required: true,
+                        where: { createdAt: { [Op.gte]: startDateStr, [Op.lte]: endDateStr } }
+                    }]
+                }],
+                group: ['Category.id'],
+                order: [[Sequelize.literal('viewCount'), 'DESC']],
+                subQuery: false
+            });
+
+            // --- LOGIKA GROUPING TOP 9 + LAINNYA ---
+            let processedCategories = [];
+            if (allVisitedCategories.length > 10) {
+                processedCategories = allVisitedCategories.slice(0, 9);
+                const othersCount = allVisitedCategories.slice(9).reduce((sum, cat) => sum + parseInt(cat.getDataValue('viewCount')), 0);
+                processedCategories.push({
+                    name: 'Lainnya',
+                    viewCount: othersCount,
+                    getDataValue: () => othersCount
+                });
+            } else {
+                processedCategories = allVisitedCategories;
+            }
+
+            // 5. Data Tambahan
+            const totalBooks = await Book.count();
+            const totalViewsInQuarter = await BookView.count({
+                where: { createdAt: { [Op.gte]: startDateStr, [Op.lte]: endDateStr } }
+            });
+
+            res.render("admin/dashboard", {
+                title: "Dashboard", active: 'dashboard',
+                stats, years, selectedYear, selectedQuarter,
+                totalBooks, totalViewsInQuarter,
+                processedCategories, // Untuk Pie Chart (Top 9 + Lainnya)
+                top5Categories: allVisitedCategories.slice(0, 5), // Untuk List di bawah
+                user: req.user, query: req.query
+            });
+
+        } catch (err) {
+            console.error("DASHBOARD ERROR:", err);
+            res.status(500).send("Gagal memuat dashboard: " + err.message);
+        }
+    },
+
     listBooks: async (req, res) => {
         try {
             const {
