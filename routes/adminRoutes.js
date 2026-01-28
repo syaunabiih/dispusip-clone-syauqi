@@ -14,6 +14,7 @@ const superAdminController = require("../controllers/superAdmin.controller");
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const uploadExcel = multer({ storage: storage });
+const roomController = require("../controllers/room.controller");
 
 // =========================
 // LOGIN & LOGOUT (TIDAK PERLU SESSION)
@@ -37,13 +38,28 @@ router.get("/logout", logoutAction);
 // Middleware ini akan melindungi semua route di bawahnya
 router.use(isAdminLoggedIn);
 
-// Dashboard Super Admin
-router.get("/super-dashboard", (req, res, next) => {
+// Middleware Khusus Super Admin (Inline)
+const verifySuperAdmin = (req, res, next) => {
     if (req.session.user.role !== 'super_admin') {
+        // Jika bukan super admin, lempar ke dashboard biasa
         return res.redirect('/admin/dashboard');
     }
     next();
-}, superAdminController.getSuperDashboard);
+};
+
+// Dashboard Super Admin
+router.get("/super-dashboard", verifySuperAdmin, superAdminController.getSuperDashboard);
+
+// =========================
+// MANAJEMEN RUANGAN (SUPER ADMIN)
+// =========================
+// Pastikan hanya Super Admin yang bisa akses (bisa tambah middleware cek role jika perlu)
+router.get("/rooms", verifySuperAdmin, roomController.index);
+router.get("/rooms/add", verifySuperAdmin, roomController.showAdd);
+router.post("/rooms/add", verifySuperAdmin, roomController.store);
+router.get("/rooms/edit/:id", verifySuperAdmin, roomController.showEdit);
+router.post("/rooms/edit/:id", verifySuperAdmin, roomController.update);
+router.get("/rooms/delete/:id", verifySuperAdmin, roomController.delete);
 
 router.get("/dashboard", adminBookController.getDashboard);
 

@@ -27,6 +27,7 @@
                     <!-- Filter Content - Grid Layout untuk Compact -->
                     <div class="p-3">
                         <input type="hidden" name="q" value="<%= query.q || '' %>">
+                        <input type="hidden" name="id_ruangan" value="<%= query.id_ruangan %>">
                         <input type="hidden" name="searchBy" value="<%= query.searchBy || 'title' %>">
                         <input type="hidden" name="matchType" value="<%= query.matchType || 'contains' %>">
                         <input type="hidden" name="sortBy" value="<%= query.sortBy || 'title' %>" id="filterSortByMobile">
@@ -67,7 +68,7 @@
                             <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3 py-1.5 rounded-md font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
                                 <i class="fas fa-filter text-[10px]"></i> <span>Terapkan</span>
                             </button>
-                            <a href="/" class="px-3 py-1.5 text-xs text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md transition flex items-center gap-1 border border-gray-200">
+                            <a href="/search?id_ruangan=<%= query.id_ruangan %>" class="px-3 py-1.5 text-xs text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md transition flex items-center gap-1 border border-gray-200">
                                 <i class="fas fa-undo text-[10px]"></i> <span>Reset</span>
                             </a>
                         </div>
@@ -88,6 +89,7 @@
                     
                         <div class="space-y-3">
                             <input type="hidden" name="q" value="<%= query.q || '' %>">
+                            <input type="hidden" name="id_ruangan" value="<%= query.id_ruangan %>">
                             <input type="hidden" name="searchBy" value="<%= query.searchBy || 'title' %>">
                             <input type="hidden" name="matchType" value="<%= query.matchType || 'contains' %>">
                             <input type="hidden" name="sortBy" value="<%= query.sortBy || 'title' %>" id="filterSortBy">
@@ -127,7 +129,7 @@
                             
                             <div class="mt-3 flex flex-col gap-3">
                                 <div class="text-xs text-gray-500">
-                                    <a href="/" class="hover:text-blue-600 transition"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
+                                    <a href="/search?id_ruangan=<%= query.id_ruangan %>" class="hover:text-blue-600 transition"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
                         </div>
                         <% if (query.q || query.category || query.subject || query.year) { %>
                                     <span class="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-bold uppercase inline-block">Filter Aktif</span>
@@ -159,6 +161,7 @@
                             <div class="flex flex-col sm:flex-row gap-2 sm:gap-2">
                                 <!-- Search Input -->
                                 <div class="flex-grow min-w-0">
+                                    <input type="hidden" name="id_ruangan" value="<%= query.id_ruangan %>">
                                     <input type="text" name="q" value="<%= query.q || '' %>"
                                         class="w-full p-2 sm:p-2.5 text-xs sm:text-sm md:text-base border border-gray-300 rounded-md sm:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder:text-gray-400"
                                         placeholder="Cari buku...">
@@ -257,7 +260,7 @@
                 <% if (books.length > 0) { %>
                     <% books.forEach(book => { %>
                         <a 
-                                        href="/books/detail/<%= book.id %>?origin_q=<%= query.q %>&origin_searchBy=<%= query.searchBy %>&origin_matchType=<%= query.matchType %>&origin_category=<%= query.category %>&origin_subject=<%= query.subject %>&origin_year=<%= query.year %>&origin_sortBy=<%= query.sortBy %>&origin_sortOrder=<%= query.sortOrder %>&origin_page=<%= currentPage %>"
+                                        href="/books/detail/<%= book.id %>?origin_id_ruangan=<%= query.id_ruangan %>?origin_q=<%= query.q %>&origin_searchBy=<%= query.searchBy %>&origin_matchType=<%= query.matchType %>&origin_category=<%= query.category %>&origin_subject=<%= query.subject %>&origin_year=<%= query.year %>&origin_sortBy=<%= query.sortBy %>&origin_sortOrder=<%= query.sortOrder %>&origin_page=<%= currentPage %>"
                                         class="block bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 flex flex-row gap-3 group cursor-pointer active:scale-[0.98] overflow-hidden sm:rounded-lg sm:border-gray-200 sm:hover:border-blue-400 sm:hover:shadow-md sm:transition sm:active:scale-100 sm:p-4 sm:gap-4 p-3"
                             >
                                         <!-- Cover - Compact untuk mobile, normal untuk desktop -->
@@ -347,10 +350,8 @@
                         <div class="mt-6 sm:mt-8 flex flex-wrap justify-center items-center gap-1 sm:gap-2 flex-shrink-0">
                     
                     <% if (currentPage > 1) { %>
-                        <a
-                                    href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= parseInt(currentPage) - 1 %>"
-                                    class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm bg-white text-gray-600 hover:bg-blue-50 active:bg-blue-100 transition"
-                        >
+                        <a href="/search?id_ruangan=<%= query.id_ruangan %>&q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= parseInt(currentPage) - 1 %>"
+                            class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm bg-white text-gray-600 hover:bg-blue-50 active:bg-blue-100 transition">
                             <i class="fas fa-chevron-left"></i>
                         </a>
                     <% } %>
@@ -386,19 +387,16 @@
                         <% if (i === '...') { %>
                                     <span class="px-2 sm:px-3 py-1 text-xs sm:text-sm text-gray-400">...</span>
                         <% } else { %>
-                            <a 
-                                            href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= i %>"
-                                            class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm transition-colors active:scale-95 <%= currentPage == i ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-gray-600 hover:bg-blue-50' %>">
+                            <a href="/search?id_ruangan=<%= query.id_ruangan %>&q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= i %>"
+                                class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm transition-colors active:scale-95 <%= currentPage == i ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-gray-600 hover:bg-blue-50' %>">
                                 <%= i %>
                             </a>
                         <% } %>
                     <% }) %>
 
                     <% if (currentPage < totalPages) { %>
-                        <a
-                                    href="/search?q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= parseInt(currentPage) + 1 %>"
-                                    class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm bg-white text-gray-600 hover:bg-blue-50 active:bg-blue-100 transition"
-                        >
+                        <a href="/search?id_ruangan=<%= query.id_ruangan %>&q=<%= query.q %>&searchBy=<%= query.searchBy %>&matchType=<%= query.matchType %>&category=<%= query.category %>&subject=<%= query.subject %>&year=<%= query.year %>&sortBy=<%= query.sortBy %>&sortOrder=<%= query.sortOrder %>&page=<%= parseInt(currentPage) + 1 %>"
+                                class="px-2.5 sm:px-3 py-1.5 sm:py-1 border rounded text-xs sm:text-sm bg-white text-gray-600 hover:bg-blue-50 active:bg-blue-100 transition">
                             <i class="fas fa-chevron-right"></i>
                         </a>
                     <% } %>
@@ -515,8 +513,10 @@
                 const formSubject = getFormValue('subject');
                 const formYear = getFormValue('year');
                 const formQ = getFormValue('q');
+                const currentIdRuangan = getParam('id_ruangan') || document.querySelector('input[name="id_ruangan"]')?.value || '';
                 
                 const urlParams = {
+                    id_ruangan: currentIdRuangan,
                     q: formQ || getParam('q', ''),
                     searchBy: getFormValue('searchBy') || getParam('searchBy', 'title'),
                     matchType: getFormValue('matchType') || getParam('matchType', 'contains'),

@@ -1,241 +1,121 @@
-<%- include('partials/header') %>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<%- include('partials/header') %> 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div id="dashboardReport" class="flex flex-col gap-8">
-    
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="p-6">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
-            <h1 class="text-3xl font-black text-gray-800 tracking-tight">Laporan Kunjungan & Ruangan</h1>
-            <p class="text-gray-500 mt-1 italic">Statistik buku tamu dan penggunaan fasilitas ruangan secara real-time.</p>
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard Super Admin</h1>
+            <p class="text-gray-500 mt-1">Selamat datang kembali, <span class="font-semibold text-blue-600"><%= user %></span>!</p>
+        </div>
+        <div class="flex gap-3">
+            <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-calendar-alt"></i> <%= new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+            </span>
         </div>
     </div>
 
-    <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm no-export">
-        <div class="flex flex-wrap items-end gap-6">
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Pilih Tahun</label>
-                <select id="filterYear" class="border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all min-w-[120px]">
-                    <option value="2026" selected>2026</option>
-                    <option value="2025">2025</option>
-                </select>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+            <div>
+                <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Total Koleksi Buku</p>
+                <h2 class="text-4xl font-extrabold text-gray-800"><%= stats.totalBooks %></h2>
+                <a href="/admin/books" class="text-sm text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block">
+                    Lihat Katalog <i class="fas fa-arrow-right ml-1"></i>
+                </a>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Periode Laporan</label>
-                <select id="filterQuarter" class="border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all min-w-[180px]">
-                    <option value="1" selected>Januari - Maret</option>
-                    <option value="2">April - Juni</option>
-                    <option value="3">Juli - September</option>
-                    <option value="4">Oktober - Desember</option>
-                </select>
+            <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl">
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+            <div>
+                <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Admin Ruangan</p>
+                <h2 class="text-4xl font-extrabold text-gray-800"><%= stats.totalUsers %></h2>
+                <p class="text-xs text-green-600 mt-2 font-medium">
+                    <i class="fas fa-check-circle"></i> Akun Aktif
+                </p>
+            </div>
+            <div class="w-16 h-16 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-3xl">
+                <i class="fas fa-users-cog"></i>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+            <div>
+                <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Total Ruangan OPAC</p>
+                <h2 class="text-4xl font-extrabold text-gray-800"><%= stats.totalRuangan %></h2>
+                <a href="/admin/rooms" class="text-sm text-purple-600 hover:text-purple-700 font-medium mt-2 inline-block">
+                    Kelola Ruangan <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-3xl">
+                <i class="fas fa-door-open"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-rocket text-yellow-500 mr-2"></i> Akses Cepat
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+                <a href="/admin/rooms/add" class="p-4 bg-purple-50 rounded-xl hover:bg-purple-100 hover:text-purple-800 transition group border border-purple-100">
+                    <div class="font-bold mb-1 flex items-center gap-2">
+                        <i class="fas fa-plus-circle text-purple-600 group-hover:scale-110 transition-transform"></i> Tambah Ruangan
+                    </div>
+                    <p class="text-xs text-gray-500 group-hover:text-purple-700">Buat ruangan OPAC baru & akun adminnya</p>
+                </a>
+
+                <a href="/admin/rooms" class="p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 hover:text-indigo-800 transition group border border-indigo-100">
+                    <div class="font-bold mb-1 flex items-center gap-2">
+                        <i class="fas fa-list text-indigo-600 group-hover:scale-110 transition-transform"></i> Daftar Ruangan
+                    </div>
+                    <p class="text-xs text-gray-500 group-hover:text-indigo-700">Lihat dan edit data ruangan yang ada</p>
+                </a>
+
+                <a href="/admin/books" class="p-4 bg-blue-50 rounded-xl hover:bg-blue-100 hover:text-blue-800 transition group border border-blue-100">
+                    <div class="font-bold mb-1 flex items-center gap-2">
+                        <i class="fas fa-book text-blue-600 group-hover:scale-110 transition-transform"></i> Katalog Pusat
+                    </div>
+                    <p class="text-xs text-gray-500 group-hover:text-blue-700">Akses data buku seluruh ruangan</p>
+                </a>
+
+                <a href="/admin/dashboard" class="p-4 bg-orange-50 rounded-xl hover:bg-orange-100 hover:text-orange-800 transition group border border-orange-100">
+                    <div class="font-bold mb-1 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-orange-600 group-hover:scale-110 transition-transform"></i> Statistik Detail
+                    </div>
+                    <p class="text-xs text-gray-500 group-hover:text-orange-700">Lihat grafik kunjungan dan kategori</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center text-center">
+            <div class="mb-6">
+                <div class="inline-block p-4 bg-blue-100 rounded-full text-blue-600 mb-4 animate-pulse">
+                    <i class="fas fa-server text-4xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Status Sistem</h3>
+                <p class="text-gray-500 text-sm">Sistem Referensi & OPAC Multi-Ruangan</p>
             </div>
             
-            <div class="flex gap-2 ml-auto">
-                <button onclick="alert('Filter Diterapkan')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-100">
-                    <i class="fas fa-sync-alt mr-2"></i> Tampilkan
-                </button>
-                <button onclick="exportDashboardToPDF()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-red-100">
-                    <i class="fas fa-file-pdf mr-2"></i> Export PDF
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white p-7 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center group hover:shadow-xl transition-all">
-            <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                <i class="fas fa-users text-xl"></i>
-            </div>
-            <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Pengunjung</p>
-            <h2 class="text-3xl font-black text-gray-800">1,425</h2>
-        </div>
-        
-        <div class="bg-white p-7 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center group hover:shadow-xl transition-all">
-            <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                <i class="fas fa-door-open text-xl"></i>
-            </div>
-            <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Ruangan Aktif</p>
-            <h2 class="text-3xl font-black text-gray-800">8</h2>
-        </div>
-
-        <div class="bg-white p-7 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center group hover:shadow-xl transition-all">
-            <div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                <i class="fas fa-clock text-xl"></i>
-            </div>
-            <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Booking Pending</p>
-            <h2 class="text-3xl font-black text-gray-800">14</h2>
-        </div>
-
-        <div class="bg-white p-7 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center group hover:shadow-xl transition-all">
-            <div class="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-600 group-hover:text-white transition-all">
-                <i class="fas fa-percentage text-xl"></i>
-            </div>
-            <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Okupansi</p>
-            <h2 class="text-3xl font-black text-gray-800">76%</h2>
-        </div>
-    </div>
-
-    <div class="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm min-h-[450px] flex flex-col">
-        <h5 class="text-sm font-black text-gray-700 mb-6 uppercase tracking-widest flex items-center">
-            <i class="fas fa-chart-area mr-3 text-emerald-500"></i> Tren Pengunjung Harian (Buku Tamu)
-        </h5>
-        <div class="flex-1">
-            <canvas id="guestTrendChart"></canvas>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 mb-10">
-        <div class="md:col-span-7 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col min-h-[450px]">
-            <h5 class="text-sm font-black text-gray-700 mb-8 uppercase tracking-widest">
-                <i class="fas fa-info-circle mr-3 text-blue-500"></i> Tujuan Kunjungan
-            </h5>
-            <div class="flex flex-col xl:flex-row items-center gap-12 flex-1">
-                <div class="w-full xl:w-1/2 h-[300px]">
-                    <canvas id="purposeChart"></canvas>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between px-8 py-3 border-b border-gray-100 hover:bg-gray-50 transition rounded-lg">
+                    <span class="text-gray-600 font-medium">Status Server</span>
+                    <span class="text-green-600 font-bold flex items-center gap-1"><i class="fas fa-check-circle"></i> Online</span>
                 </div>
-                <div id="purposeLegend" class="w-full xl:w-1/2 flex flex-col gap-3"></div>
-            </div>
-        </div>
-
-        <div class="md:col-span-5 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col">
-            <h5 class="text-sm font-black text-gray-700 mb-8 uppercase tracking-widest flex items-center">
-                <i class="fas fa-building mr-3 text-amber-500"></i> Ruangan Terpadat
-            </h5>
-            <div class="flex flex-col gap-6">
-                <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-sm font-black text-gray-700 tracking-tight">Ruang Diskusi A</span>
-                        <span class="text-xs font-bold text-blue-600">85x</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: 90%"></div>
-                    </div>
+                <div class="flex justify-between px-8 py-3 border-b border-gray-100 hover:bg-gray-50 transition rounded-lg">
+                    <span class="text-gray-600 font-medium">Database</span>
+                    <span class="text-blue-600 font-bold flex items-center gap-1"><i class="fas fa-database"></i> Terhubung</span>
                 </div>
-                <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-sm font-black text-gray-700 tracking-tight">Ruang Audio Visual</span>
-                        <span class="text-xs font-bold text-blue-600">62x</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div class="bg-emerald-500 h-2.5 rounded-full" style="width: 65%"></div>
-                    </div>
+                <div class="flex justify-between px-8 py-3 hover:bg-gray-50 transition rounded-lg">
+                    <span class="text-gray-600 font-medium">Total Akun Admin</span>
+                    <span class="text-gray-800 font-bold"><%= stats.totalUsers + 1 %> (Termasuk Anda)</span>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
-
-<script>
-    // --- DUMMY DATA FOR CHART UI ---
-    const dummyLabels = ['01 Jan', '05 Jan', '10 Jan', '15 Jan', '20 Jan', '25 Jan', '30 Jan'];
-    const dummyCounts = [45, 82, 60, 110, 95, 140, 125];
-    
-    const dummyVisitPurposes = [
-        { label: 'Penelitian', count: 450 },
-        { label: 'Tugas Kuliah', count: 320 },
-        { label: 'Membaca Buku', count: 280 },
-        { label: 'Diskusi Kelompok', count: 215 },
-        { label: 'Lainnya', count: 160 }
-    ];
-
-    // 1. GUEST TREND CHART (Line/Area)
-    const ctxTrend = document.getElementById('guestTrendChart').getContext('2d');
-    new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-            labels: dummyLabels,
-            datasets: [{
-                label: 'Pengunjung',
-                data: dummyCounts,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 4,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 6,
-                pointBackgroundColor: '#fff',
-                pointBorderWidth: 3
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { grid: { borderDash: [5, 5] }, ticks: { font: { weight: 'bold' } } },
-                x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
-            }
-        }
-    });
-
-    // 2. PURPOSE CHART (Doughnut)
-    const chartColors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
-    
-    const ctxPurpose = document.getElementById('purposeChart').getContext('2d');
-    const legendContainer = document.getElementById('purposeLegend');
-
-    new Chart(ctxPurpose, {
-        type: 'doughnut',
-        data: {
-            labels: dummyVisitPurposes.map(p => p.label),
-            datasets: [{
-                data: dummyVisitPurposes.map(p => p.count),
-                backgroundColor: chartColors,
-                borderWidth: 6,
-                borderColor: '#fff',
-                hoverOffset: 15
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            cutout: '72%'
-        }
-    });
-
-    // Generate Legend items
-    dummyVisitPurposes.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-emerald-200 transition-all';
-        div.innerHTML = `
-            <div class="flex items-center gap-3 truncate">
-                <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${chartColors[index % chartColors.length]}"></span>
-                <span class="text-[11px] font-black text-gray-600 truncate uppercase tracking-tighter">${item.label}</span>
-            </div>
-            <span class="text-[11px] font-black text-emerald-600 ml-4">${item.count}</span>
-        `;
-        legendContainer.appendChild(div);
-    });
-
-    // 3. EXPORT PDF FUNCTION
-    async function exportDashboardToPDF() {
-        const element = document.getElementById('dashboardReport');
-        const noExport = document.querySelectorAll('.no-export');
-        
-        // Disable interaction during export
-        const btn = event.currentTarget;
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generating...';
-        btn.disabled = true;
-
-        noExport.forEach(el => el.style.display = 'none');
-        
-        const opt = {
-            margin: 10,
-            filename: `Laporan_Kunjungan_Library_${new Date().getTime()}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        try {
-            await html2pdf().set(opt).from(element).save();
-        } catch(e) {
-            console.error(e);
-        } finally {
-            noExport.forEach(el => el.style.display = '');
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-        }
-    }
-</script>

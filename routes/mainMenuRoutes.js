@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const searchPageController = require('../controllers/searchPage.controller');
 
 // Halaman Pertama (Root)
 router.get('/', (req, res) => {
@@ -7,9 +8,7 @@ router.get('/', (req, res) => {
 });
 
 // Anda bisa menambahkan route untuk fitur lain di sini nanti
-router.get('/ruangan', (req, res) => {
-    res.send('Halaman OPAC Ruangan (Coming Soon)');
-});
+router.get('/pilih-ruangan', searchPageController.pilihRuangan);
 
 router.get('/buku-tamu', (req, res) => {
     res.send('Halaman Buku Tamu (Coming Soon)');

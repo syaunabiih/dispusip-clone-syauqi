@@ -1,9 +1,28 @@
 const { Op } = require("sequelize");
-const { Book, Author, Publisher, Subject, Category, BookCopy } = require("../models");
+const { Ruangan, Book, Author, Publisher, Subject, Category, BookCopy } = require("../models");
 
 module.exports = {
+    // Fungsi baru untuk menampilkan daftar ruangan
+    pilihRuangan: async (req, res) => {
+        try {
+            const daftarRuangan = await Ruangan.findAll();
+            res.render("user/pilih-ruangan", { 
+                title: "Pilih Ruangan OPAC", 
+                daftarRuangan 
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send("Gagal memuat daftar ruangan");
+        }
+    },
     indexPage: async (req, res) => {
         try {
+            // 1. Tangkap id_ruangan dari query string (URL)
+            const id_ruangan = req.query.id_ruangan;
+            // 2. Jika tidak ada id_ruangan, paksa user pilih ruangan dulu
+            if (!id_ruangan) {
+                return res.redirect('/ruangan'); 
+            }
             // Helper function untuk handle array parameters (karena ada multiple form dengan name yang sama)
             const getFirstValue = (value, defaultValue = "") => {
                 if (Array.isArray(value)) {
@@ -113,7 +132,9 @@ module.exports = {
             // =========================
             // WHERE CONDITION (BOOK)
             // =========================
-            const whereCondition = {};
+            const whereCondition = {
+                id_ruangan: id_ruangan
+            };
 
             // Validasi dan sanitasi category (pastikan numeric atau string kosong)
             if (category && category !== "" && category !== "0") {
@@ -379,6 +400,7 @@ module.exports = {
                     years: yearsRaw
                 },
                 query: {
+                    id_ruangan: id_ruangan,
                     q: normalizedQ, // Gunakan normalizedQ untuk render
                     searchBy,
                     matchType,

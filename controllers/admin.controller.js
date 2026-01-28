@@ -1,4 +1,4 @@
-const { Book, Category, Author, Publisher, Ruangan, Subject, BookCopy, BookView, sequelize, Sequelize } = require("../models");
+const { Book, Category, Author, Publisher, Ruangan, Subject, BookCopy, BookView, BookAuthor, sequelize, Sequelize } = require("../models");
 const { Op } = require("sequelize");
 const ExcelJS = require('exceljs');
 
