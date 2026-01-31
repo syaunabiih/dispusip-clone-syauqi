@@ -10,7 +10,6 @@ module.exports = {
         const layoutReferensi = {
             cols: 40,
             rows: 25,
-            version: 1,
             items: [
                 { c1: 6, c2: 14, id: "lib_desk", r1: 3, r2: 4, name: "Meja Pustakawan", role: null, type: "table" },
                 { c1: 2, c2: 5, id: "visit_h_1", r1: 22, r2: 23, name: "Meja Pengunjung", role: null, type: "table" },
@@ -43,7 +42,14 @@ module.exports = {
                 { c1: 25, c2: 30, id: "table_1769822890443_ffde105bc16208", r1: 10, r2: 14, name: "Meja Pengunjung 5", role: "visitor", type: "table" },
                 { c1: 17, c2: 23, id: "table_1769822902449_a7024ef63ca6d8", r1: 10, r2: 14, name: "Meja Pengunjung 6", role: "visitor", type: "table" }
             ],
+            version: 1
         };
+
+        // 0. Hapus data lama jika ada (agar seed bisa dijalankan ulang)
+        await queryInterface.bulkDelete('ruangan', null, {});
+        await queryInterface.bulkDelete('users', {
+            username: ['admin', 'admin_referensi', 'admin_tandon']
+        }, {});
 
         // 1. Masukkan data ke tabel 'users'
         await queryInterface.bulkInsert('users', [
@@ -79,7 +85,7 @@ module.exports = {
                 id_ruangan: 1,
                 nama_ruangan: 'Ruangan Referensi',
                 id_admin_ruangan: 2, // Merujuk ke id admin_referensi
-                layout_json: layoutReferensi,
+                layout_json: JSON.stringify(layoutReferensi),
                 createdAt: new Date(),
                 updatedAt: new Date(),
             },
