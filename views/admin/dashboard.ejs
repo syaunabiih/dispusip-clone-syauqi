@@ -1,17 +1,23 @@
 <%- include('partials/header') %>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+</style>
 
 <div class="flex flex-col gap-6" id="dashboardReport">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 class="text-2xl font-bold text-gray-800">📊 Laporan Statistik</h2>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 no-export">
+    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
         <div class="flex flex-wrap items-end gap-4">
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-semibold text-gray-600">Pilih Tahun</label>
-                <select name="year" id="filterYear" class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="filterYear" class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
                     <% years.forEach(y => { %>
                         <option value="<%= y %>" <%= selectedYear == y ? 'selected' : '' %>><%= y %></option>
                     <% }) %>
@@ -19,7 +25,7 @@
             </div>
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-semibold text-gray-600">Pilih Periode</label>
-                <select name="quarter" id="filterQuarter" class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="filterQuarter" class="border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="1" <%= selectedQuarter == 1 ? 'selected' : '' %>>Januari - Maret</option>
                     <option value="2" <%= selectedQuarter == 2 ? 'selected' : '' %>>April - Juni</option>
                     <option value="3" <%= selectedQuarter == 3 ? 'selected' : '' %>>Juli - September</option>
@@ -29,18 +35,19 @@
             <button type="button" onclick="applyFilter()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-all">
                 Tampilkan
             </button>
-
-            <button type="button" onclick="exportDashboardToPDF()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg transition-all flex items-center gap-2">
-                <i class="fas fa-file-pdf"></i> Export ke PDF
-            </button>
         </div>
     </div>
 
     <div class="grid grid-cols-10 gap-6">
-        <div class="col-span-10 lg:col-span-7 bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col h-full">
-            <h5 class="text-lg font-bold text-gray-700 mb-4 flex items-center">
-                <i class="fas fa-chart-line mr-2 text-blue-600"></i> Tren Kunjungan Buku (Mingguan)
-            </h5>
+        <div id="cardLineChart" class="col-span-10 lg:col-span-7 bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col h-full">
+            <div class="flex justify-between items-center mb-4">
+                <h5 class="text-lg font-bold text-gray-700 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-blue-600"></i> Tren Kunjungan Buku (Mingguan)
+                </h5>
+                <button onclick="downloadCardAsImage('cardLineChart', 'Tren_Kunjungan')" class="text-[10px] uppercase tracking-wider bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition flex items-center gap-2">
+                    <i class="fas fa-camera"></i> Simpan Gambar
+                </button>
+            </div>
             <div class="flex-1 min-h-[300px]">
                 <canvas id="viewsChart"></canvas>
             </div>
@@ -50,22 +57,24 @@
             <div class="flex-1 bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl shadow-lg text-white flex flex-col justify-center items-center text-center">
                 <p class="text-blue-100 text-xs font-medium uppercase tracking-widest mb-2">Total Koleksi Judul</p>
                 <h1 class="text-4xl font-black"><%= totalBooks %></h1>
-                <p class="mt-4 text-[10px] text-blue-200 opacity-80 uppercase font-bold tracking-tighter">Judul Buku Terdaftar</p>
             </div>
-            
             <div class="flex-1 bg-gradient-to-br from-emerald-500 to-teal-700 p-6 rounded-2xl shadow-lg text-white flex flex-col justify-center items-center text-center">
                 <p class="text-emerald-100 text-xs font-medium uppercase tracking-widest mb-2">Kunjungan Periode Ini</p>
                 <h1 class="text-4xl font-black"><%= totalViewsInQuarter %></h1>
-                <p class="mt-4 text-[10px] text-emerald-100 opacity-80 uppercase font-bold tracking-tighter">Detail Buku Dilihat</p>
             </div>
         </div>
     </div>
 
     <div class="grid grid-cols-10 gap-6">
-        <div class="col-span-10 lg:col-span-7 bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col h-full">
-            <h5 class="text-lg font-bold text-gray-700 mb-6">
-                <i class="fas fa-chart-pie mr-2 text-orange-500"></i> Persentase Kategori
-            </h5>
+        <div id="cardPieChart" class="col-span-10 lg:col-span-7 bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col h-full">
+            <div class="flex justify-between items-center mb-6">
+                <h5 class="text-lg font-bold text-gray-700">
+                    <i class="fas fa-chart-pie mr-2 text-orange-500"></i> Persentase Kategori yang Dicari
+                </h5>
+                <button onclick="downloadCardAsImage('cardPieChart', 'Persentase_Kategori')" class="text-[10px] uppercase tracking-wider bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-200 transition flex items-center gap-2">
+                    <i class="fas fa-camera"></i> Simpan Gambar
+                </button>
+            </div>
             <div class="flex flex-col md:flex-row items-center gap-8 flex-1">
                 <div class="w-full md:w-1/2 h-[280px]">
                     <% if (processedCategories.length > 0) { %>
@@ -74,8 +83,7 @@
                         <p class="text-gray-400 text-sm italic text-center py-20">Belum ada data</p>
                     <% } %>
                 </div>
-                <div id="chartLegend" class="w-full md:w-1/2 flex flex-col gap-3 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
-                </div>
+                <div id="chartLegend" class="w-full md:w-1/2 flex flex-col gap-3 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar"></div>
             </div>
         </div>
 
@@ -88,16 +96,11 @@
                     <% top5Categories.forEach((cat, index) => { %>
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                             <div class="flex items-center gap-3 truncate">
-                                <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full text-sm font-bold">
-                                    <%= index + 1 %>
-                                </span>
+                                <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full text-sm font-bold"><%= index + 1 %></span>
                                 <span class="text-xs font-bold text-gray-700 truncate"><%= cat.name %></span>
                             </div>
                             <div class="flex flex-col items-center min-w-[60px] border-l border-gray-200 pl-3">
-                                <span class="text-base font-black text-blue-600 leading-none">
-                                    <%= cat.getDataValue('viewCount') %>
-                                </span>
-                                <p class="text-[8px] text-gray-400 uppercase mt-1 font-bold text-center">Kali Dicari</p>
+                                <span class="text-base font-black text-blue-600 leading-none"><%= cat.getDataValue('viewCount') %></span>
                             </div>
                         </div>
                     <% }) %>
@@ -113,14 +116,44 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // FUNGSI APPLY FILTER
     function applyFilter() {
         const year = document.getElementById('filterYear').value;
         const quarter = document.getElementById('filterQuarter').value;
         window.location.href = `/admin/dashboard?year=${year}&quarter=${quarter}`;
     }
 
-    // 1. Line Chart
+    // FUNGSI BARU: Download satu Card utuh (beserta judulnya)
+    async function downloadCardAsImage(cardId, fileName) {
+        const cardElement = document.getElementById(cardId);
+        
+        // Sembunyikan tombol download sementara agar tidak ikut terfoto
+        const btn = cardElement.querySelector('button');
+        btn.style.visibility = 'hidden';
+
+        try {
+            const canvas = await html2canvas(cardElement, {
+                scale: 2, // Resolusi tinggi
+                backgroundColor: "#ffffff",
+                logging: false,
+                useCORS: true
+            });
+
+            const year = document.getElementById('filterYear').value;
+            const quarter = document.getElementById('filterQuarter').value;
+            
+            const link = document.createElement('a');
+            link.download = `${fileName}_Q${quarter}_${year}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        } catch (err) {
+            console.error("Gagal mengambil gambar:", err);
+        } finally {
+            // Tampilkan kembali tombol download
+            btn.style.visibility = 'visible';
+        }
+    }
+
+    // --- Chart.js Rendering ---
     const ctxLine = document.getElementById('viewsChart').getContext('2d');
     new Chart(ctxLine, {
         type: 'line',
@@ -138,19 +171,15 @@
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: false, 
-            animation: false, // Mematikan animasi agar export PDF lebih akurat
+            maintainAspectRatio: false,
             plugins: { legend: { display: false } } 
         }
     });
 
-    // 2. Pie Chart & Custom Legend
-    const chartColors = ['#3b82f6', '#f97316', '#10b981', '#f43f5e', '#8b5cf6', '#06b6d4', '#6366f1', '#a855f7', '#ec4899', '#71717a'];
     const catData = <%- JSON.stringify(processedCategories) %>;
-    
     if (catData && catData.length > 0) {
         const ctxPie = document.getElementById('categoryChart').getContext('2d');
-        const legendContainer = document.getElementById('chartLegend');
+        const chartColors = ['#3b82f6', '#f97316', '#10b981', '#f43f5e', '#8b5cf6', '#06b6d4', '#6366f1', '#a855f7', '#ec4899', '#71717a'];
 
         new Chart(ctxPie, {
             type: 'pie',
@@ -165,12 +194,12 @@
             },
             options: { 
                 responsive: true, 
-                maintainAspectRatio: false, 
-                animation: false,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } } 
             }
         });
 
+        const legendContainer = document.getElementById('chartLegend');
         catData.forEach((cat, index) => {
             const legendItem = document.createElement('div');
             legendItem.className = 'flex items-center justify-between text-[11px] border-b border-gray-50 pb-1';
@@ -179,55 +208,10 @@
                     <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${chartColors[index % chartColors.length]}"></span>
                     <span class="text-gray-700 font-medium truncate">${cat.name}</span>
                 </div>
-                <span class="text-blue-600 font-bold ml-2">${cat.viewCount} Kali Dicari</span>
+                <span class="text-blue-600 font-bold ml-2">${cat.viewCount} Views</span>
             `;
             legendContainer.appendChild(legendItem);
         });
-    }
-
-    // 3. FUNGSI EXPORT PDF FINAL
-    async function exportDashboardToPDF() {
-        const element = document.getElementById('dashboardReport');
-        const filterSection = document.querySelector('.no-export');
-        
-        const year = document.getElementById('filterYear').value;
-        const quarter = document.getElementById('filterQuarter').value;
-
-        // 1. Masuk ke mode export
-        filterSection.style.display = 'none';
-        element.classList.add('is-exporting');
-
-        const opt = {
-            margin: [10, 10, 10, 10], // Margin aman 1cm sekeliling
-            filename: `Laporan_Statistik_Q${quarter}_${year}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true, 
-                logging: false,
-                letterRendering: true,
-                // KUNCI: Menggunakan lebar standar portrait agar pas di kertas
-                windowWidth: 800 
-            },
-            jsPDF: { 
-                unit: 'mm', 
-                format: 'a4', 
-                orientation: 'portrait', 
-                compress: true 
-            }
-        };
-
-        try {
-            // Menunggu sebentar agar layout menyesuaikan
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await html2pdf().set(opt).from(element).save();
-        } catch (error) {
-            console.error("Gagal export PDF:", error);
-        } finally {
-            // 2. Kembalikan ke tampilan normal browser
-            element.classList.remove('is-exporting');
-            filterSection.style.display = 'block';
-        }
     }
 </script>
 

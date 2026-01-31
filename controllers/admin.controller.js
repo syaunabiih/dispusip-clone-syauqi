@@ -805,7 +805,20 @@ module.exports = {
                 q, searchBy, matchType, category, subject, year, incomplete, page 
             } = req.body;
 
-            // Gunakan origin_q jika q utama kosong, untuk konsistensi redirect
+            // 1. Identifikasi Ruangan Admin yang Login (Sama seperti di listBooks)
+            const adminId = req.user.id;
+            const ruanganAdmin = await Ruangan.findOne({ 
+                where: { id_admin_ruangan: adminId } 
+            });
+
+            // Proteksi: Pastikan admin memiliki otoritas
+            if (!ruanganAdmin && req.user.role !== 'super_admin') {
+                return res.status(403).send("Akses ditolak: Anda tidak memiliki otoritas atas ruangan manapun.");
+            }
+
+            const idRuangan = ruanganAdmin ? ruanganAdmin.id_ruangan : null;
+
+            // Redirect URL untuk kembali ke posisi pencarian sebelumnya
             const searchKeyword = q || req.body.origin_q || '';
             const redirectUrl = `/admin/books?q=${encodeURIComponent(searchKeyword)}&page=${page || 1}`;
 
@@ -813,17 +826,21 @@ module.exports = {
                 return res.status(400).send("Konfirmasi salah.");
             }
 
+            // 2. Inisialisasi Where Condition dengan FILTER RUANGAN (Kunci Perbaikan)
             let whereCondition = {};
+            if (idRuangan) {
+                whereCondition.id_ruangan = idRuangan; // Pastikan hanya menghapus di ruangan ini
+            }
             
+            // --- Terapkan filter yang sama dengan listBooks ---
             if (category) whereCondition.category_id = category;
             if (year) whereCondition.publish_year = year;
+            
+            // Filter Subjek (menggunakan include nanti)
             if (subject) whereCondition['$Subjects.id$'] = subject;
 
-            // --- PERBAIKAN DI SINI ---
             if (q) {
-                // Pastikan q dikonversi ke String dan ambil elemen pertama jika dia Array
                 let searchValue = (Array.isArray(q) ? q[0] : String(q)).trim();
-                
                 let operator = Op.like;
                 if (matchType === "startsWith") searchValue = `${searchValue}%`;
                 else if (matchType === "endsWith") searchValue = `%${searchValue}`;
@@ -831,9 +848,9 @@ module.exports = {
                 else searchValue = `%${searchValue}%`;
 
                 if (searchBy === "title") whereCondition.title = { [operator]: searchValue };
-                if (searchBy === "isbn") whereCondition.isbn = { [operator]: searchValue };
-                if (searchBy === "subject") whereCondition['$Subjects.name$'] = { [operator]: searchValue };
-                if (searchBy === "category") whereCondition['$Category.name$'] = { [operator]: searchValue };
+                else if (searchBy === "isbn") whereCondition.isbn = { [operator]: searchValue };
+                else if (searchBy === "subject") whereCondition['$Subjects.name$'] = { [operator]: searchValue };
+                else if (searchBy === "category") whereCondition['$Category.name$'] = { [operator]: searchValue };
             }
 
             if (incomplete === "1") {
@@ -850,10 +867,10 @@ module.exports = {
             if (deleteAll === 'true') {
                 const excluded = Array.isArray(excludeIds) ? excludeIds : (excludeIds ? [excludeIds] : []);
                 
-                // Gabungkan filter pencarian dengan pengecualian (excludeIds)
+                // Tambahkan pengecualian ID yang di-uncheck
                 whereCondition.id = { [Op.notIn]: excluded };
 
-                // Ambil data untuk cleanup gambar (gunakan include agar filter Subject/Category jalan)
+                // Ambil data untuk cleanup gambar
                 const booksToDelete = await Book.findAll({
                     where: whereCondition,
                     include: [
@@ -864,8 +881,9 @@ module.exports = {
                 });
                 
                 const deleteIds = booksToDelete.map(b => b.id);
+                if (deleteIds.length === 0) return res.redirect(redirectUrl);
 
-                // Hapus buku berdasarkan ID yang sudah terfilter
+                // Hapus buku (Hanya yang id-nya ditemukan di ruangan tersebut)
                 await Book.destroy({
                     where: { id: { [Op.in]: deleteIds } }
                 });
@@ -883,13 +901,17 @@ module.exports = {
             const idsToDelete = Array.isArray(bookIds) ? bookIds : [bookIds];
             if (!idsToDelete || idsToDelete.length === 0) return res.redirect(redirectUrl);
 
+            // Proteksi Tambahan: Pastikan ID yang dikirim memang milik ruangan admin tersebut
+            const manualWhere = { id: { [Op.in]: idsToDelete } };
+            if (idRuangan) manualWhere.id_ruangan = idRuangan;
+
             const booksToDelete = await Book.findAll({
-                where: { id: { [Op.in]: idsToDelete } },
+                where: manualWhere,
                 attributes: ['image']
             });
 
-            await Book.destroy({
-                where: { id: { [Op.in]: idsToDelete } }
+            const deletedCount = await Book.destroy({
+                where: manualWhere
             });
 
             const uniqueImages = [...new Set(booksToDelete.map(b => b.image).filter(img => img))];
@@ -897,7 +919,7 @@ module.exports = {
                 await cleanupUnusedImage(imageFilename);
             }
 
-            res.redirect(`${redirectUrl}&deleteSuccess=${idsToDelete.length}`);
+            res.redirect(`${redirectUrl}&deleteSuccess=${deletedCount}`);
         } catch (err) {
             console.error("ERROR DELETE MULTIPLE:", err);
             res.status(500).send("Gagal menghapus data: " + err.message);

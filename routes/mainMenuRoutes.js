@@ -6,7 +6,7 @@ const searchPageController = require('../controllers/searchPage.controller');
 router.get('/', (req, res) => {
     res.render('../views/user/main-menu', { title: 'Main Menu' });
 });
-
+router.get('/search', searchPageController.indexPage);
 // Anda bisa menambahkan route untuk fitur lain di sini nanti
 router.get('/pilih-ruangan', searchPageController.pilihRuangan);
 

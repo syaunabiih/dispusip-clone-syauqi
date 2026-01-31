@@ -257,9 +257,14 @@ module.exports = {
                             [Op.and]: tokens.map(token => ({ call_number: { [Op.like]: `%${token}%` } }))
                         };
 
-                        whereCondition[Op.or] = [
-                            titleCondition,
-                            callNumCondition
+                        whereCondition[Op.and] = [
+                            { id_ruangan: id_ruangan },
+                            {
+                                [Op.or]: [
+                                    { title: { [Op.like]: `%${normalizedQ}%` } },
+                                    { call_number: { [Op.like]: `%${normalizedQ}%` } }
+                                ]
+                            }
                         ];
                         break;
                 }
