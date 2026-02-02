@@ -45,10 +45,14 @@ module.exports = {
             version: 1
         };
 
+        // Layout Default untuk Puskel (Kosong) agar tidak error
+        const layoutDefault = { cols: 20, rows: 20, items: [], version: 1 };
+
         // 0. Hapus data lama jika ada (agar seed bisa dijalankan ulang)
         await queryInterface.bulkDelete('ruangan', null, {});
+        // Tambahkan 'admin_puskel' di sini
         await queryInterface.bulkDelete('users', {
-            username: ['admin', 'admin_referensi', 'admin_tandon']
+            username: ['admin', 'admin_referensi', 'admin_tandon', 'admin_puskel']
         }, {});
 
         // 1. Masukkan data ke tabel 'users'
@@ -76,6 +80,15 @@ module.exports = {
                 role: 'admin_ruangan',
                 createdAt: new Date(),
                 updatedAt: new Date(),
+            },
+            // === TAMBAHAN UNTUK PUSKEL ===
+            {
+                id: 4,
+                username: 'admin_puskel',
+                password: passwordRuangan,
+                role: 'admin_ruangan',
+                createdAt: new Date(),
+                updatedAt: new Date(),
             }
         ]);
 
@@ -93,6 +106,16 @@ module.exports = {
                 id_ruangan: 2,
                 nama_ruangan: 'Ruangan Tandon',
                 id_admin_ruangan: 3, // Merujuk ke id admin_tandon
+                // Biarkan Tandon tanpa layout_json seperti format asli kamu
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            },
+            // === TAMBAHAN UNTUK PUSKEL ===
+            {
+                id_ruangan: 3,
+                nama_ruangan: 'Ruangan Pustaka Keliling',
+                id_admin_ruangan: 4, // Merujuk ke id admin_puskel
+                layout_json: JSON.stringify(layoutDefault), // Layout kosong
                 createdAt: new Date(),
                 updatedAt: new Date(),
             }
@@ -103,7 +126,7 @@ module.exports = {
         // Hapus data dari kedua tabel dalam urutan yang benar (child first)
         await queryInterface.bulkDelete('ruangan', null, {});
         await queryInterface.bulkDelete('users', {
-            username: ['admin', 'admin_referensi', 'admin_tandon']
+            username: ['admin', 'admin_referensi', 'admin_tandon', 'admin_puskel']
         }, {});
     }
 };

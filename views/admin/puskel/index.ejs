@@ -1,0 +1,144 @@
+<%- include('../partials/header') %>
+
+<div class="flex flex-col gap-6">
+    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-truck-loading text-blue-600"></i>
+            <%= title %>
+        </h2>
+
+        <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+            
+            <a href="/admin/puskel/download-template" class="btn btn-outline-secondary btn-sm flex items-center gap-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-file-excel text-green-600"></i> Template
+            </a>
+
+            <a href="/admin/puskel/export" class="btn btn-success btn-sm flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-file-export"></i> Export
+            </a>
+
+            <form action="/admin/puskel/import" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
+                <div class="relative">
+                    <input type="file" name="fileExcel" id="fileExcel" class="hidden" accept=".xlsx" onchange="this.form.submit()" required>
+                    <label for="fileExcel" class="cursor-pointer bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 border border-blue-200 transition-colors">
+                        <i class="fas fa-file-import"></i> Import Excel
+                    </label>
+                </div>
+            </form>
+
+            <div class="h-6 w-px bg-gray-300 mx-1 hidden sm:block"></div>
+
+            <button type="button" onclick="openModal('modalAddStock')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors">
+                <i class="fas fa-qrcode"></i> Muat Buku (Scan)
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">Judul Buku</th>
+                        <th scope="col" class="px-6 py-3">Pengarang</th>
+                        <th scope="col" class="px-6 py-3 text-center">No. Induk</th>
+                        <th scope="col" class="px-6 py-3 text-center">No. Panggil</th>
+                        <th scope="col" class="px-6 py-3 text-center">Jumlah</th>
+                        <th scope="col" class="px-6 py-3 text-center">Status / Lokasi</th>
+                        <th scope="col" class="px-6 py-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% copies.forEach(copy => { %>
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-gray-800 text-base">
+                                <%= copy.Book ? copy.Book.title : 'Judul Error' %>
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                <%= copy.Book ? copy.Book.publish_year : '-' %>
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4 font-medium text-gray-700">
+                            <%= (copy.Book && copy.Book.Author) ? copy.Book.Author.name : '-' %>
+                        </td>
+
+                        <td class="px-6 py-4 text-center">
+                            <span class="bg-gray-100 text-gray-800 font-mono text-xs font-bold px-2 py-1 rounded border border-gray-300">
+                                <%= copy.no_induk %>
+                            </span>
+                        </td>
+
+                        <td class="px-6 py-4 text-center font-mono text-blue-600 font-semibold">
+                            <%= (copy.Book && copy.Book.call_number) ? copy.Book.call_number : '000 XXX' %>
+                        </td>
+
+                        <td class="px-6 py-4 text-center">
+                            1 Eks
+                        </td>
+
+                        <td class="px-6 py-4 text-center">
+                            <% if(copy.status === 'dipinjam_puskel' && copy.puskelLoans && copy.puskelLoans.length > 0) { %>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded block">
+                                    Dipinjam
+                                </span>
+                                <span class="text-[10px] text-blue-600 font-semibold mt-1 block">
+                                    <%= copy.puskelLoans[0].institution.name %>
+                                </span>
+                            <% } else { %>
+                                <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">
+                                    Ready
+                                </span>
+                            <% } %>
+                        </td>
+
+                        <td class="px-6 py-4 text-center">
+                            <% if(copy.status === 'tersedia_puskel') { %>
+                                <a href="/admin/puskel/remove-stock/<%= copy.id %>" 
+                                   onclick="return confirm('Kembalikan buku ini ke Gudang Utama?')"
+                                   class="text-red-500 hover:text-red-700" title="Kembalikan ke Gudang">
+                                    <i class="fas fa-reply"></i>
+                                </a>
+                            <% } else { %>
+                                <span class="text-gray-300"><i class="fas fa-lock"></i></span>
+                            <% } %>
+                        </td>
+
+                    </tr>
+                    <% }) %>
+                    <% if (copies.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-8 text-gray-400">
+                                <i class="fas fa-box-open text-4xl mb-2 block"></i>
+                                Belum ada buku di Mobil Puskel.
+                            </td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalAddStock" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-gray-900 opacity-50" onclick="closeModal('modalAddStock')"></div>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md z-10 p-6 relative">
+        <h3 class="text-lg font-bold mb-4">Muat Buku dari Gudang</h3>
+        <form action="/admin/puskel/add-stock" method="POST">
+            <input type="text" name="no_induk" class="w-full border p-3 rounded mb-4 text-center font-mono text-lg" placeholder="Scan Barcode / Ketik Kode" required autofocus>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeModal('modalAddStock')" class="px-4 py-2 bg-gray-200 rounded">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Muat</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+
+<%- include('../partials/footer') %>

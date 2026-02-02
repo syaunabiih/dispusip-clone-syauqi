@@ -2,28 +2,40 @@ const express = require("express");
 const router = express.Router();
 const { isAdminLoggedIn } = require("../middleware/auth");
 const adminBookController = require("../controllers/admin.controller");
-// Pastikan middleware imageMiddleware mengembalikan fungsi multer atau instance yang sesuai
-// Jika error "is not a function", ubah menjadi require("../middleware/imageMiddleware") tanpa ()
+
+// Middleware Upload Image
 const upload = require("../middleware/imageMiddleware")(); 
+
+// Controllers
 const { loginPage, loginAction, logoutAction } = require("../controllers/auth.controller"); 
 const categoryController = require('../controllers/category.controller');
 const subjectController = require('../controllers/subject.controller');
 const authorController = require('../controllers/author.controller');
 const publisherController = require('../controllers/publisher.controller');
 const superAdminController = require("../controllers/superAdmin.controller");
+const roomController = require("../controllers/room.controller");
+const puskelController = require('../controllers/puskel.controller');
+
+// Multer untuk Excel
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const uploadExcel = multer({ storage: storage });
-const roomController = require("../controllers/room.controller");
+
 
 // =========================
-// LOGIN & LOGOUT (TIDAK PERLU SESSION)
+// LOGIN & LOGOUT (TIDAK PERLU SESSION CHECK DI SINI)
 // =========================
 
 router.get("/", (req, res) => {
-    if (req.session.user?.role === 'super_admin') {
+    const user = req.session.user;
+    if (user?.role === 'super_admin') {
         res.redirect("/admin/super-dashboard");
-    } else {
+    } 
+    // Redirect khusus Puskel
+    else if (user?.role === 'admin_ruangan' && user.nama_ruangan === 'Ruangan Pustaka Keliling') {
+        res.redirect("/admin/puskel");
+    } 
+    else {
         res.redirect("/admin/dashboard");
     }
 });
@@ -33,15 +45,14 @@ router.post("/login", loginAction);
 router.get("/logout", logoutAction);
 
 // =========================
-// SEMUA ROUTE ADMIN PERLU LOGIN
+// SEMUA ROUTE DI BAWAH INI PERLU LOGIN
 // =========================
-// Middleware ini akan melindungi semua route di bawahnya
+// Middleware ini akan melindungi semua route di bawahnya (Cek Session)
 router.use(isAdminLoggedIn);
 
 // Middleware Khusus Super Admin (Inline)
 const verifySuperAdmin = (req, res, next) => {
     if (req.session.user.role !== 'super_admin') {
-        // Jika bukan super admin, lempar ke dashboard biasa
         return res.redirect('/admin/dashboard');
     }
     next();
@@ -53,7 +64,6 @@ router.get("/super-dashboard", verifySuperAdmin, superAdminController.getSuperDa
 // =========================
 // MANAJEMEN RUANGAN (SUPER ADMIN)
 // =========================
-// Pastikan hanya Super Admin yang bisa akses (bisa tambah middleware cek role jika perlu)
 router.get("/rooms", verifySuperAdmin, roomController.index);
 router.get("/rooms/add", verifySuperAdmin, roomController.showAdd);
 router.post("/rooms/add", verifySuperAdmin, roomController.store);
@@ -61,40 +71,22 @@ router.get("/rooms/edit/:id", verifySuperAdmin, roomController.showEdit);
 router.post("/rooms/edit/:id", verifySuperAdmin, roomController.update);
 router.get("/rooms/delete/:id", verifySuperAdmin, roomController.delete);
 
+// Dashboard Admin Biasa
 router.get("/dashboard", adminBookController.getDashboard);
 
 // =========================
-// LIST BUKU
+// MANAJEMEN BUKU
 // =========================
 router.get("/books", adminBookController.listBooks);
 router.get("/books/export", adminBookController.exportToExcel);
 router.get("/books/template", adminBookController.downloadTemplate);
 router.post("/books/import", uploadExcel.single("excelFile"), adminBookController.importExcel);
-
-// =========================
-// TAMBAH BUKU
-// =========================
 router.get("/books/add", adminBookController.showAddPage);
-router.post(
-    "/books/add",
-    upload.single("image"),
-    adminBookController.addBook
-);
-
-// =========================
-// EDIT & UPDATE BUKU
-// =========================
+router.post("/books/add", upload.single("image"), adminBookController.addBook);
 router.get("/books/edit/:id", adminBookController.showEditPage);
-router.post(
-    "/books/edit/:id",
-    upload.single("image"),
-    adminBookController.updateBook
-);
-
-// =========================
-// DELETE BUKU
-// =========================
+router.post("/books/edit/:id", upload.single("image"), adminBookController.updateBook);
 router.get("/books/delete/:id", adminBookController.deleteBook);
+router.post('/books/delete-multiple', adminBookController.deleteMultiple);
 
 // =========================
 // AUTOCOMPLETE
@@ -105,7 +97,7 @@ router.get("/autocomplete/publisher", adminBookController.findPublisher);
 router.get("/autocomplete/subject", adminBookController.findSubject);
 
 // =========================
-// KATEGORI & SUBJEK
+// MASTER DATA (Kategori, Subjek, Penulis, Penerbit)
 // =========================
 router.get('/categories', categoryController.getAllCategories);
 router.post('/categories/add', categoryController.addCategory);
@@ -117,20 +109,11 @@ router.post('/subjects/add', subjectController.addSubject);
 router.post('/subjects/edit/:id', subjectController.updateSubject);
 router.get('/subjects/delete/:id', subjectController.deleteSubject);
 
-router.post('/books/delete-multiple', adminBookController.deleteMultiple);
-
-// =========================
-// PENULIS (Authors)
-// =========================
-// 'requireAuth' dihapus karena sudah dicover oleh router.use(isAdminLoggedIn) di atas
 router.get('/authors', authorController.index);
 router.post('/authors', authorController.store);
 router.post('/authors/update/:id', authorController.update);
 router.post('/authors/delete/:id', authorController.destroy);
 
-// =========================
-// PENERBIT (Publishers)
-// =========================
 router.get('/publishers', publisherController.index);
 router.post('/publishers', publisherController.store);
 router.post('/publishers/update/:id', publisherController.update);
@@ -141,5 +124,42 @@ router.post('/publishers/delete/:id', publisherController.destroy);
 // =========================
 router.get("/shelf-management", adminBookController.showShelfManagementPage);
 router.post("/shelf-management/update", adminBookController.bulkUpdateShelf);
+
+// ===========================================
+// ROUTE KHUSUS PUSTAKA KELILING (PUSKEL)
+// ===========================================
+
+// Middleware Cek Akses: Hanya Super Admin & Admin Puskel
+const verifyPuskelAccess = (req, res, next) => {
+    const user = req.session.user;
+    // Pastikan user ada (meskipun sudah dicek isAdminLoggedIn, double check is safe)
+    if (user && (user.role === 'super_admin' || (user.role === 'admin_ruangan' && user.nama_ruangan === 'Ruangan Pustaka Keliling'))) {
+        next();
+    } else {
+        res.status(403).send("Akses Ditolak: Anda bukan petugas Pustaka Keliling.");
+    }
+};
+
+// 1. Dashboard Logistik
+router.get('/puskel', verifyPuskelAccess, puskelController.index);
+
+// 2. Data Peminjam & Tambah Lembaga
+router.get('/puskel/borrowers', verifyPuskelAccess, puskelController.listBorrowers);
+router.post('/puskel/institution/add', verifyPuskelAccess, puskelController.addInstitution); // <-- ROUTE BARU
+
+// 3. Kelola Stok (Masuk/Keluar Gudang)
+router.post('/puskel/add-stock', verifyPuskelAccess, puskelController.addStock);
+router.get('/puskel/remove-stock/:id', verifyPuskelAccess, puskelController.removeStock);
+router.get('/puskel/template', verifyPuskelAccess, puskelController.downloadTemplate); // Download Format
+router.get('/puskel/export', verifyPuskelAccess, puskelController.exportExcel); // Export Data
+router.post('/puskel/import', verifyPuskelAccess, uploadExcel.single('excelFile'), puskelController.importExcel); // Import Action
+
+// 4. Sirkulasi
+router.post('/puskel/loan', verifyPuskelAccess, puskelController.loanBook);
+router.post('/puskel/return', verifyPuskelAccess, puskelController.returnBook);
+
+
+// === ROUTE BARU UNTUK DETAIL ===
+router.get('/puskel/institution/:id', verifyPuskelAccess, puskelController.detailInstitution);
 
 module.exports = router;

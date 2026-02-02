@@ -1,17 +1,25 @@
 'use strict';
 
 const bcrypt = require('bcryptjs');
-const { User } = require('../models');
+// IMPORT MODEL RUANGAN AGAR BISA DICEK
+const { User, Ruangan } = require('../models'); 
 
 const loginPage = (req, res) => {
-    res.render('admin/login', { error: null });
+    // Jika ada error dari url query, ambil. Jika tidak, null.
+    const error = req.query.error || null;
+    res.render('admin/login', { error });
 };
 
 const loginAction = async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        const user = await User.findOne({ where: { username } });
+        // 1. CARI USER BESERTA DATA RUANGANNYA
+        const user = await User.findOne({ 
+            where: { username },
+            include: [{ model: Ruangan, as: 'ruangan' }] // Penting! Ambil data ruangan
+        });
+
         if (!user) {
             return res.render("admin/login", { error: "Username tidak ditemukan" });
         }
@@ -21,19 +29,28 @@ const loginAction = async (req, res) => {
             return res.render("admin/login", { error: "Password salah" });
         }
 
-        // 🔑 simpan session sebagai object
+        // 2. SIMPAN DATA LENGKAP KE SESSION (TERMASUK NAMA RUANGAN)
         req.session.user = {
             id: user.id,
             username: user.username,
-            role: user.role
+            role: user.role,
+            // Simpan nama ruangan biar Sidebar tahu ini Puskel atau bukan
+            nama_ruangan: user.ruangan ? user.ruangan.nama_ruangan : null, 
+            id_ruangan: user.ruangan ? user.ruangan.id_ruangan : null
         };
 
-        console.log("ROLE LOGIN:", user.role);
+        console.log("LOGIN BERHASIL:", user.username, "| RUANGAN:", req.session.user.nama_ruangan);
 
-        // redirect berdasarkan role
+        // 3. REDIRECT SPESIFIK
         if (user.role === 'super_admin') {
             return res.redirect("/admin/super-dashboard");
-        } else {
+        } 
+        // JIKA ADMIN PUSKEL -> LEMPAR KE VIEW KHUSUS PUSKEL
+        else if (user.ruangan && user.ruangan.nama_ruangan === 'Ruangan Pustaka Keliling') {
+            return res.redirect("/admin/puskel");
+        } 
+        // JIKA ADMIN LAIN -> LEMPAR KE DASHBOARD BIASA
+        else {
             return res.redirect("/admin/dashboard");
         }
 
@@ -46,7 +63,7 @@ const loginAction = async (req, res) => {
 const logoutAction = (req, res) => {
     req.session.destroy(err => {
         if (err) console.error("Logout error:", err);
-        res.redirect("/admin/login"); // ✅ benar
+        res.redirect("/admin/login");
     });
 };
 

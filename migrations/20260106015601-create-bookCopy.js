@@ -24,7 +24,9 @@ module.exports = {
         unique: true
       },
       status: {
-        type: Sequelize.ENUM('tersedia', 'dipinjam', 'rusak', 'hilang'),
+        // Update baris ini: Tambahkan 'tersedia_puskel' dan 'dipinjam_puskel'
+        type: Sequelize.ENUM('tersedia', 'dipinjam', 'rusak', 'hilang', 'tersedia_puskel', 'dipinjam_puskel'),
+        allowNull: false,
         defaultValue: 'tersedia'
       },
       createdAt: {

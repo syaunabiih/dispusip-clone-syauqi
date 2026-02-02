@@ -1,0 +1,152 @@
+<%- include('../partials/header') %>
+
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex mb-2" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="/admin/puskel/borrowers" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-arrow-left mr-2"></i> Kembali ke Data Peminjam
+                    </a>
+                </li>
+            </ol>
+        </nav>
+        <h2 class="text-2xl font-bold text-gray-800">Detail Peminjaman</h2>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h3 class="text-xl font-bold text-gray-800 mb-1"><%= institution.name %></h3>
+                <div class="flex items-center gap-4 text-sm text-gray-600">
+                    <span><i class="fas fa-map-marker-alt text-red-500 mr-1"></i> <%= institution.address %></span>
+                    <span><i class="fas fa-user text-blue-500 mr-1"></i> <%= institution.contact_person %> (<%= institution.phone %>)</span>
+                </div>
+            </div>
+            
+            <button onclick="openModal('modalLoan')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors">
+                <i class="fas fa-book-reader"></i> Pinjamkan Buku Baru
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <h5 class="font-bold text-gray-700 flex items-center gap-2">
+                <i class="fas fa-list text-gray-400"></i> Buku yang Sedang Dipinjam
+            </h5>
+            <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                Total: <%= institution.PuskelLoans ? institution.PuskelLoans.length : 0 %> Buku
+            </span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">Kode Buku</th>
+                        <th scope="col" class="px-6 py-3">Judul Buku</th>
+                        <th scope="col" class="px-6 py-3">Tanggal Pinjam</th>
+                        <th scope="col" class="px-6 py-3">Jatuh Tempo</th>
+                        <th scope="col" class="px-6 py-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (institution.PuskelLoans && institution.PuskelLoans.length > 0) { %>
+                        <% institution.PuskelLoans.forEach(loan => { %>
+                        <tr class="bg-white border-b hover:bg-gray-50">
+                            <td class="px-6 py-4 font-mono font-bold text-gray-800">
+                                <%= loan.bookCopy ? loan.bookCopy.no_induk : '-' %>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-gray-800">
+                                    <%= (loan.bookCopy && loan.bookCopy.Book) ? loan.bookCopy.Book.title : 'Judul Tidak Ditemukan' %>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <%= new Date(loan.loan_date).toLocaleDateString('id-ID') %>
+                            </td>
+                            <td class="px-6 py-4">
+                                <% 
+                                    const today = new Date();
+                                    const due = new Date(loan.due_date);
+                                    const isLate = today > due;
+                                %>
+                                <span class="<%= isLate ? 'text-red-600 font-bold' : 'text-green-600' %>">
+                                    <%= due.toLocaleDateString('id-ID') %>
+                                    <% if(isLate) { %> (Terlambat) <% } %>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <form action="/admin/puskel/return" method="POST" onsubmit="return confirm('Konfirmasi pengembalian buku ini?')">
+                                    <input type="hidden" name="loan_id" value="<%= loan.id %>">
+                                    <button type="submit" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-1 mx-auto">
+                                        <i class="fas fa-check"></i> Kembalikan
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-gray-400">
+                                <i class="fas fa-box-open text-3xl mb-2 block"></i>
+                                Tidak ada buku yang sedang dipinjam saat ini.
+                            </td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalLoan" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-gray-900 opacity-50" onclick="closeModal('modalLoan')"></div>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md z-10 p-6 relative">
+        <h3 class="text-lg font-bold mb-4 text-gray-800">Tambah Peminjaman Baru</h3>
+        
+        <form action="/admin/puskel/loan" method="POST" class="space-y-4">
+            <input type="hidden" name="institution_id" value="<%= institution.id %>">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Buku (Tersedia)</label>
+                <% if(availableBooks.length > 0) { %>
+                    <select name="book_copy_id" class="w-full border rounded p-2 text-sm bg-white" required>
+                        <option value="">-- Cari Judul / Kode --</option>
+                        <% availableBooks.forEach(book => { %>
+                            <option value="<%= book.id %>">
+                                [<%= book.no_induk %>] <%= book.Book ? book.Book.title : 'Judul Error' %>
+                            </option>
+                        <% }) %>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Menampilkan stok buku yang ada di mobil Puskel.</p>
+                <% } else { %>
+                    <div class="p-3 bg-red-50 text-red-600 text-xs rounded border border-red-200">
+                        Stok Puskel Kosong. Silakan muat buku dari gudang terlebih dahulu.
+                    </div>
+                <% } %>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Durasi Pinjam (Bulan)</label>
+                <input type="number" name="duration" value="1" min="1" required class="w-full border rounded p-2 text-sm">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4">
+                <button type="button" onclick="closeModal('modalLoan')" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" 
+                    <%= availableBooks.length === 0 ? 'disabled' : '' %>>
+                    Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+
+<%- include('../partials/footer') %>

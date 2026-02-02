@@ -1,0 +1,91 @@
+<%- include('../../partials/header') %>
+
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">
+            <i class="fas fa-plus-circle text-blue-600 mr-2"></i> Tambah Koleksi Puskel
+        </h2>
+        <a href="/admin/puskel" class="text-gray-600 hover:text-gray-800">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6">
+        
+        <form action="/admin/puskel/add" method="POST" enctype="multipart/form-data" class="space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Judul Buku *</label>
+                    <input type="text" name="title" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ISBN</label>
+                    <input type="text" name="isbn" class="w-full border rounded-lg px-4 py-2">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
+                    <input list="categoryList" name="category_id" class="w-full border rounded-lg px-4 py-2" placeholder="Pilih atau Ketik Baru" required>
+                    <datalist id="categoryList">
+                        <% categories.forEach(cat => { %>
+                            <option value="<%= cat.name %>"></option>
+                        <% }) %>
+                    </datalist>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Lokasi Rak (Di Ruangan Puskel)</label>
+                    <input type="text" name="shelf_location" class="w-full border rounded-lg px-4 py-2" placeholder="Contoh: Rak A1">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Penulis *</label>
+                    <input type="text" name="authors_penulis" class="w-full border rounded-lg px-4 py-2" required placeholder="Pisahkan dengan koma jika banyak">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Penerbit *</label>
+                    <input type="text" name="publishers" class="w-full border rounded-lg px-4 py-2" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tahun Terbit</label>
+                    <input type="number" name="publish_year" class="w-full border rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">No. Panggil *</label>
+                    <input type="text" name="call_number" class="w-full border rounded-lg px-4 py-2" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">No. Induk (Barcode) *</label>
+                    <textarea name="no_induk" rows="1" class="w-full border rounded-lg px-4 py-2" placeholder="Scan barcode di sini..." required></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Pisahkan dengan koma/enter untuk banyak buku.</p>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Subjek *</label>
+                <input type="text" name="subjects" class="w-full border rounded-lg px-4 py-2" required placeholder="Contoh: Fiksi, Novel, Sejarah">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cover Buku</label>
+                <input type="file" name="image" class="w-full border rounded-lg px-4 py-2">
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow-sm">
+                    <i class="fas fa-save mr-2"></i> Simpan Buku
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<%- include('../../partials/footer') %>
