@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { isAdminLoggedIn } = require("../middleware/auth");
 const adminBookController = require("../controllers/admin.controller");
+const booksController = require("../controllers/books.controller");
 
 // Middleware Upload Image
 const upload = require("../middleware/imageMiddleware")(); 
@@ -81,10 +82,10 @@ router.get("/books", adminBookController.listBooks);
 router.get("/books/export", adminBookController.exportToExcel);
 router.get("/books/template", adminBookController.downloadTemplate);
 router.post("/books/import", uploadExcel.single("excelFile"), adminBookController.importExcel);
-router.get("/books/add", adminBookController.showAddPage);
-router.post("/books/add", upload.single("image"), adminBookController.addBook);
-router.get("/books/edit/:id", adminBookController.showEditPage);
-router.post("/books/edit/:id", upload.single("image"), adminBookController.updateBook);
+router.get("/books/add", booksController.showAddPage);
+router.post("/books/add", upload.single("image"), booksController.addBook);
+router.get("/books/edit/:id", booksController.showEditPage);
+router.post("/books/edit/:id", upload.single("image"), booksController.updateBook);
 router.get("/books/delete/:id", adminBookController.deleteBook);
 router.post('/books/delete-multiple', adminBookController.deleteMultiple);
 

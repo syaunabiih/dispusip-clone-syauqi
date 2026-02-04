@@ -23,6 +23,11 @@ module.exports = {
         allowNull: false,
         unique: true
       },
+      no_barcode: { 
+        type: Sequelize.STRING,
+        allowNull: true, 
+        unique: true
+      },
       status: {
         // Update baris ini: Tambahkan 'tersedia_puskel' dan 'dipinjam_puskel'
         type: Sequelize.ENUM('tersedia', 'dipinjam', 'rusak', 'hilang', 'tersedia_puskel', 'dipinjam_puskel'),

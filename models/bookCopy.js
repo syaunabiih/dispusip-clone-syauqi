@@ -14,18 +14,22 @@ module.exports = (sequelize, DataTypes) => {
             unique: true, // Nomor induk tidak boleh sama antar fisik buku
             allowNull: false
         },
+        no_barcode: { 
+            type: DataTypes.STRING,
+            unique: true,
+            allowNull: true 
+        },
         status: {
         // Tambahkan 'tersedia_puskel' (Ada di Ruangan Puskel)
         // Tambahkan 'dipinjam_puskel' (Sedang dipinjam Lembaga)
         type: DataTypes.ENUM('tersedia', 'dipinjam', 'rusak', 'hilang', 'tersedia_puskel', 'dipinjam_puskel'),
         allowNull: false,
         defaultValue: 'tersedia'
-    }
+        }
     });
 
     BookCopy.associate = (models) => {
         BookCopy.belongsTo(models.Book, { foreignKey: 'book_id' });
-        BookCopy.hasMany(models.PuskelLoan, { foreignKey: 'book_copy_id', as: 'puskelLoans' });
     };
 
     return BookCopy;
