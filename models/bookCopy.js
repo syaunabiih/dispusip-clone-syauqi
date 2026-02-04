@@ -30,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
 
     BookCopy.associate = (models) => {
         BookCopy.belongsTo(models.Book, { foreignKey: 'book_id' });
+        BookCopy.hasMany(models.PuskelLoan, { foreignKey: 'book_copy_id', as: 'puskelLoans' });
     };
 
     return BookCopy;

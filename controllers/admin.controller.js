@@ -18,7 +18,8 @@ const EXCEL_COLUMNS = [
     { header: 'Penanggung Jawab', key: 'authors_pj', width: 30 },
     { header: 'Penerbit (pisahkan dengan koma)', key: 'publishers', width: 30 },
     { header: 'Subjek* (pisahkan dengan koma)', key: 'subjects', width: 30 },
-    { header: 'Nomor Induk* (pisahkan dengan koma)', key: 'no_induk', width: 40 },
+    { header: 'Nomor Induk*', key: 'no_induk', width: 40 },
+    { header: 'Nomor Barcode', key: 'barcode', width: 40 },
     { header: 'Catatan', key: 'notes', width: 30 },
     { header: 'Abstrak', key: 'abstract', width: 50 },
     { header: 'Gambar', key: 'image', width: 30 }
@@ -513,26 +514,22 @@ module.exports = {
 
     exportToExcel: async (req, res) => {
         try {
-            // 1. Ambil ID ruangan yang dikelola admin ini
             const adminId = req.user.id; 
             const ruanganAdmin = await Ruangan.findOne({ 
                 where: { id_admin_ruangan: adminId } 
             });
 
-            // Proteksi: Jika bukan super_admin dan tidak punya ruangan, gagalkan export
             if (!ruanganAdmin && req.user.role !== 'super_admin') {
-                return res.status(403).send("Akses ditolak: Anda tidak memiliki otoritas atas ruangan manapun.");
+                return res.status(403).send("Akses ditolak.");
             }
 
-            // 2. Siapkan kondisi filter
             const whereCondition = {};
             if (ruanganAdmin) {
                 whereCondition.id_ruangan = ruanganAdmin.id_ruangan;
             }
 
-            // 3. Query buku berdasarkan filter ruangan
             const books = await Book.findAll({
-                where: whereCondition, // KUNCI FILTER DI SINI
+                where: whereCondition,
                 include: [
                     { model: Category },
                     { model: Author, as: 'Authors' },
@@ -554,7 +551,7 @@ module.exports = {
                         : '';
                 };
 
-                worksheet.addRow({
+                const baseData = {
                     title: book.title,
                     edition: book.edition,
                     publish_year: book.publish_year,
@@ -570,16 +567,25 @@ module.exports = {
                     authors_pj: getNamesByRole('penanggung jawab'),
                     publishers: book.Publishers ? book.Publishers.map(p => p.name).join(', ') : '',
                     subjects: book.Subjects ? book.Subjects.map(s => s.name).join(', ') : '',
-                    no_induk: book.copies ? book.copies.map(c => c.no_induk).join(', ') : '',
                     notes: book.notes,
                     abstract: book.abstract,
                     image: book.image
-                });
+                };
+
+                if (book.copies && book.copies.length > 0) {
+                    book.copies.forEach(copy => {
+                        worksheet.addRow({
+                            ...baseData,
+                            no_induk: copy.no_induk,
+                            barcode: copy.no_barcode ? '*' + copy.no_barcode : ''
+                        });
+                    });
+                } else {
+                    worksheet.addRow(baseData);
+                }
             });
 
             worksheet.getRow(1).font = { bold: true };
-            
-            // Buat nama file dinamis berdasarkan nama ruangan
             const namaRuanganText = ruanganAdmin ? ruanganAdmin.nama_ruangan.replace(/\s+/g, '_') : 'Semua_Ruangan';
             
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -597,7 +603,6 @@ module.exports = {
         try {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Template Import Buku');
-
             worksheet.columns = EXCEL_COLUMNS;
 
             worksheet.addRow({ 
@@ -608,10 +613,11 @@ module.exports = {
                 call_number: '813 AND l',
                 shelf_location: 'Rak A1',
                 no_induk: 'B001',
+                barcode: 'tambahkan bintang(*)sebelum inputbarcode contoh: *00000173817', // CONTOH DENGAN BINTANG
                 publishers: 'Bentang Pustaka',
-                subjects: 'Novel',
-                image: 'https://upload.wikimedia.org/wikipedia/id/8/8e/Laskar_pelangi_sampul.jpg' // Contoh URL gambar
+                subjects: 'Novel'
             });
+
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader('Content-Disposition', 'attachment; filename=Template_Import_Buku.xlsx');
             await workbook.xlsx.write(res);
@@ -623,25 +629,18 @@ module.exports = {
 
     importExcel: async (req, res) => {
         try {
-            console.log(`\n${'='.repeat(60)}`);
-            console.log(`[IMPORT EXCEL] Memulai proses import...`);
-            console.log(`${'='.repeat(60)}\n`);
-            
             if (!req.file) return res.status(400).send("Tidak ada file yang diunggah");
 
-            // 1. Identifikasi Ruangan Admin yang Login
             const adminId = req.user.id;
             const ruanganAdmin = await Ruangan.findOne({ 
                 where: { id_admin_ruangan: adminId } 
             });
 
-            // Proteksi: Pastikan admin memiliki otoritas atas suatu ruangan
             if (!ruanganAdmin && req.user.role !== 'super_admin') {
-                return res.status(403).send("Akses ditolak: Anda tidak memiliki otoritas atas ruangan manapun.");
+                return res.status(403).send("Akses ditolak.");
             }
 
             const idRuangan = ruanganAdmin ? ruanganAdmin.id_ruangan : null;
-
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(req.file.buffer); 
             const worksheet = workbook.getWorksheet(1);
@@ -651,12 +650,11 @@ module.exports = {
 
             const booksData = [];
             worksheet.eachRow((row, rowNumber) => {
-                if (rowNumber === 1) return; // Skip header
+                if (rowNumber === 1) return; 
 
                 const rawTitle = row.getCell(1).text.trim();
                 if (!rawTitle) return;
 
-                // Normalisasi judul agar seragam di database
                 const formattedTitle = toTitleCase(rawTitle);
 
                 booksData.push({
@@ -668,50 +666,32 @@ module.exports = {
                     isbn: row.getCell(6).text,
                     call_number: row.getCell(7).text,
                     language: row.getCell(8).text,
-                    shelf_location: row.getCell(9).text, // Gunakan standarisasi rak jika ada
+                    shelf_location: row.getCell(9).text,
                     categoryName: row.getCell(10).text,
                     authorsPenulis: row.getCell(11).text,
                     authorsEditor: row.getCell(12).text,
                     authorsPJ: row.getCell(13).text,
                     publishers: row.getCell(14).text,
                     subjects: row.getCell(15).text,
-                    noInduk: row.getCell(16).text,
-                    notes: row.getCell(17).text,
-                    abstract: row.getCell(18).text,
-                    imageInput: row.getCell(19).text.trim()
+                    noInduk: row.getCell(16).text.trim(),
+                    barcode: row.getCell(17).text.trim().replace(/^\*/, ''), // HAPUS BINTANG JIKA ADA
+                    notes: row.getCell(18).text,
+                    abstract: row.getCell(19).text,
+                    imageInput: row.getCell(20).text.trim()
                 });
             });
 
             for (const data of booksData) {
-                // 2. Cek Duplikat berdasarkan Judul DAN ID Ruangan
-                // Ini penting agar admin ruangan lain bisa punya buku berjudul sama tanpa konflik data
                 let book = await Book.findOne({ 
                     where: {
                         [Op.and]: [
-                            Sequelize.where(
-                                Sequelize.fn('LOWER', Sequelize.col('title')), 
-                                Sequelize.fn('LOWER', data.title)
-                            ),
-                            { id_ruangan: idRuangan } // Kunci pencarian pada ruangan admin terkait
+                            Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('title')), Sequelize.fn('LOWER', data.title)),
+                            { id_ruangan: idRuangan }
                         ]
                     }
                 });
 
-                // Penanganan Gambar (Logika download atau local check)
-                let finalImageName = null;
-                if (data.imageInput) {
-                    if (data.imageInput.startsWith('http')) {
-                        // Logika downloadImage() Anda di sini
-                    } else {
-                        const checkPath = path.join(__dirname, '../public/image/uploads', data.imageInput);
-                        if (fs.existsSync(checkPath)) finalImageName = data.imageInput;
-                    }
-                }
-
                 if (!book) {
-                    // --- 3. BUKU BARU (INSERT) ---
-                    console.log(`[BARU] Menyimpan: ${data.title} ke Ruangan: ${ruanganAdmin.nama_ruangan}`);
-                    
                     const finalCategoryName = (data.categoryName && data.categoryName.trim() !== "") ? data.categoryName.trim() : 'Tanpa Kategori';
                     const [cat] = await Category.findOrCreate({ where: { name: finalCategoryName } });
 
@@ -728,41 +708,36 @@ module.exports = {
                         notes: data.notes,
                         abstract: data.abstract,
                         category_id: cat.id,
-                        id_ruangan: idRuangan, // OTOMATIS terikat ke ruangan admin yang login
-                        image: finalImageName
+                        id_ruangan: idRuangan,
+                        image: null 
                     });
                     successCount++;
                 } else {
-                    // --- 4. UPDATE BUKU (Jika ditemukan di ruangan yang sama) ---
-                    console.log(`[UPDATE] Buku ditemukan di area ${ruanganAdmin.nama_ruangan}: ${book.title}`);
-                    const updateData = {};
-                    
-                    const fields = ['edition', 'publish_year', 'publish_place', 'physical_description', 'isbn', 'call_number', 'language', 'shelf_location', 'notes', 'abstract'];
-                    fields.forEach(f => {
-                        if ((!book[f] || book[f] === '-' || book[f] === '') && data[f]) {
-                            updateData[f] = data[f];
-                        }
-                    });
-
-                    if (finalImageName) updateData.image = finalImageName;
-                    if (Object.keys(updateData).length > 0) await book.update(updateData);
                     existingCount++;
                 }
 
-                // --- 5. LOGIKA RELASI (Nomor Induk, Author, Publisher, Subject) ---
                 if (data.noInduk) {
-                    const nos = data.noInduk.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== "");
-                    for (const n of nos) {
-                        await BookCopy.findOrCreate({
-                            where: { no_induk: n }, 
-                            defaults: { book_id: book.id, status: 'tersedia' }
+                    const [copy, copyCreated] = await BookCopy.findOrCreate({
+                        where: { no_induk: data.noInduk }, 
+                        defaults: { 
+                            book_id: book.id, 
+                            no_barcode: data.barcode || null, 
+                            status: 'tersedia' 
+                        }
+                    });
+
+                    // PERBAIKAN: Jika eksemplar sudah ada, tetap update barcodenya agar sinkron dengan Excel
+                    if (!copyCreated) {
+                        await copy.update({ 
+                            no_barcode: data.barcode || copy.no_barcode,
+                            book_id: book.id 
                         });
                     }
+                    
                     const countTotal = await BookCopy.count({ where: { book_id: book.id } });
                     await book.update({ stock_total: countTotal });
                 }
 
-                // Fungsi internal untuk import author dengan role
                 const importAuthorWithRole = async (input, roleName) => {
                     if (!input) return;
                     const names = String(input).split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
@@ -777,7 +752,6 @@ module.exports = {
                 await importAuthorWithRole(data.authorsEditor, 'editor');
                 await importAuthorWithRole(data.authorsPJ, 'penanggung jawab');
 
-                // Relasi many-to-many lainnya (Publisher & Subject)
                 const processRel = async (bookObj, input, Model, getter, setter) => {
                     if (!input) return;
                     const names = String(input).split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
