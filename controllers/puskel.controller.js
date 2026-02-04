@@ -128,8 +128,15 @@ module.exports = {
                 phone: phone || '-', 
                 email: '-' 
             });
+            if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+                // Jika AJAX (seperti dari SweetAlert), kirim JSON sukses
+                return res.status(200).json({ success: true, message: "Lembaga berhasil ditambahkan" });
+            }
             res.redirect('/admin/puskel/borrowers');
         } catch (error) {
+            if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+                return res.status(500).json({ success: false, message: error.message });
+            }
             res.status(500).send("Gagal tambah lembaga: " + error.message);
         }
     },
@@ -302,6 +309,9 @@ module.exports = {
                 }
                 successCount++;
             }
+            if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+                return res.status(200).json({ success: true, message: "Buku berhasil ditambahkan" });
+            }
             res.send(`<script>alert("Berhasil memproses ${successCount} buku ke Puskel!"); window.location.href="/admin/puskel";</script>`);
         } catch (error) {
             console.error("Error addStock:", error);
@@ -419,6 +429,9 @@ module.exports = {
                     await BookCopy.create({ book_id: book.id, no_induk: noInduk, status: 'tersedia_puskel', condition: 'baik' });
                 }
                 countSuccess++;
+            }
+            if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+                return res.status(200).json({ success: true, message: "Import berhasil" });
             }
             res.send(`<script>alert("Berhasil import ${countSuccess} buku ke Puskel!"); window.location.href="/admin/puskel";</script>`);
         } catch (error) { res.status(500).send('Gagal import: ' + error.message); }

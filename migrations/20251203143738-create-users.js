@@ -19,7 +19,7 @@ module.exports = {
         allowNull: false
       },
       role: {
-        type: Sequelize.ENUM('super_admin', 'admin_ruangan'),
+        type: Sequelize.ENUM('super_admin', 'admin_ruangan', 'admin_puskel'),
         allowNull: false,
         defaultValue: 'admin_ruangan'
       },

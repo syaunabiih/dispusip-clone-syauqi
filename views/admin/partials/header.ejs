@@ -108,14 +108,10 @@
                         class="block px-4 sm:px-6 py-2 sm:py-3 hover:bg-blue-50 text-sm sm:text-base <%= safeActive === 'publishers' || safeTitle === 'Kelola Penerbit' ? 'bg-blue-100 font-semibold' : '' %>">
                         🏢 Penerbit
                     </a>
-                    
-                    <% if (typeof user !== 'undefined' && user.role === 'super_admin') { %>
-                        <a href="/admin/shelf-management"
-                            class="block px-4 sm:px-6 py-2 sm:py-3 hover:bg-blue-50 text-sm sm:text-base <%= safeActive === 'shelf-management' ? 'bg-blue-100 font-semibold' : '' %>">
-                            📍 Manajemen Rak
-                        </a>
-                    <% } %>
-
+                    <a href="/admin/shelf-management"
+                        class="block px-4 sm:px-6 py-2 sm:py-3 hover:bg-blue-50 text-sm sm:text-base <%= safeActive === 'shelf-management' ? 'bg-blue-100 font-semibold' : '' %>">
+                        📍 Manajemen Rak
+                    </a>
                 <% } %>
                 </nav>
         </div>

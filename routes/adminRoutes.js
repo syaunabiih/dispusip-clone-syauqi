@@ -8,7 +8,8 @@ const booksController = require("../controllers/books.controller");
 const upload = require("../middleware/imageMiddleware")(); 
 
 // Controllers
-const { loginPage, loginAction, logoutAction } = require("../controllers/auth.controller"); 
+// const { loginPage, loginAction, logoutAction } = require("../controllers/auth.controller"); 
+const authController = require('../controllers/auth.controller');
 const categoryController = require('../controllers/category.controller');
 const subjectController = require('../controllers/subject.controller');
 const authorController = require('../controllers/author.controller');
@@ -27,23 +28,33 @@ const uploadExcel = multer({ storage: storage });
 // LOGIN & LOGOUT (TIDAK PERLU SESSION CHECK DI SINI)
 // =========================
 
-router.get("/", (req, res) => {
-    const user = req.session.user;
-    if (user?.role === 'super_admin') {
-        res.redirect("/admin/super-dashboard");
-    } 
-    // Redirect khusus Puskel
-    else if (user?.role === 'admin_ruangan' && user.nama_ruangan === 'Ruangan Pustaka Keliling') {
-        res.redirect("/admin/puskel");
-    } 
-    else {
-        res.redirect("/admin/dashboard");
-    }
-});
+// router.get("/", (req, res) => {
+//     const user = req.session.user;
+//     if (user?.role === 'super_admin') {
+//         res.redirect("/admin/super-dashboard");
+//     } 
+//     // Redirect khusus Puskel
+//     else if (user?.role === 'admin_ruangan' && user.nama_ruangan === 'Ruangan Pustaka Keliling') {
+//         res.redirect("/admin/puskel");
+//     } 
+//     else {
+//         res.redirect("/admin/dashboard");
+//     }
+// });
 
-router.get("/login", loginPage);
-router.post("/login", loginAction);
-router.get("/logout", logoutAction);
+router.get('/login/super', authController.loginSuperAdminPage);
+router.post('/login/super', authController.loginSuperAdminAction);
+
+// --- ROUTES: LOGIN ADMIN PUSKEL ---
+router.get('/login/puskel', authController.loginPuskelPage);
+router.post('/login/puskel', authController.loginPuskelAction);
+
+// --- ROUTES: LOGIN ADMIN RUANGAN REGULER ---
+router.get('/login', authController.loginRegularPage); // Shortcut untuk admin biasa
+router.post('/login', authController.loginRegularAction);
+
+// --- LOGOUT ---
+router.get('/logout', authController.logoutAction);
 
 // =========================
 // SEMUA ROUTE DI BAWAH INI PERLU LOGIN

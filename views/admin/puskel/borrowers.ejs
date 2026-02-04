@@ -1,12 +1,14 @@
 <%- include('../partials/header') %>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="flex flex-col gap-6">
     <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <i class="fas fa-users text-green-600"></i> <%= title %>
         </h2>
         
-        <button onclick="openModal('modalAddInst')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center gap-2">
+        <button onclick="openModal('modalAddInst')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center gap-2 transition-transform hover:scale-105 active:scale-95">
             <i class="fas fa-plus"></i> Tambah Lembaga
         </button>
     </div>
@@ -26,7 +28,7 @@
                 <tbody>
                     <% if (institutions.length > 0) { %>
                         <% institutions.forEach((inst, index) => { %>
-                        <tr class="bg-white border-b hover:bg-gray-50">
+                        <tr class="bg-white border-b hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 text-center font-medium text-gray-500">
                                 <%= index + 1 %>
                             </td>
@@ -40,7 +42,7 @@
                             </td>
                             <td class="px-6 py-4 text-center">
                                  <% if(inst.PuskelLoans && inst.PuskelLoans.length > 0) { %>
-                                    <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full">
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full border border-blue-200">
                                         <%= inst.PuskelLoans.length %> Buku
                                     </span>
                                 <% } else { %>
@@ -49,8 +51,8 @@
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <a href="/admin/puskel/institution/<%= inst.id %>" 
-                                    class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1 mx-auto transition-colors w-fit border border-gray-300">
-                                    <i class="fas fa-eye"></i> Lihat Detail
+                                    class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1 mx-auto transition-colors w-fit border border-gray-300 shadow-sm hover:shadow">
+                                    <i class="fas fa-eye text-blue-500"></i> Lihat Detail
                                 </a>
                             </td>
                         </tr>
@@ -65,43 +67,119 @@
 </div>
 
 <div id="modalAddInst" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-gray-900 opacity-50" onclick="closeModal('modalAddInst')"></div>
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md z-10 p-6 relative">
+    <div class="absolute inset-0 bg-gray-900 opacity-50 backdrop-blur-sm transition-opacity" onclick="closeModal('modalAddInst')"></div>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md z-10 p-6 relative transform transition-all scale-100">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-gray-800">Tambah Lembaga Baru</h3>
-            <button onclick="closeModal('modalAddInst')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-building text-green-600"></i> Tambah Lembaga Baru
+            </h3>
+            <button onclick="closeModal('modalAddInst')" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="fas fa-times text-xl"></i></button>
         </div>
         
-        <form action="/admin/puskel/institution/add" method="POST" class="space-y-4">
+        <form id="formAddInstitution" action="/admin/puskel/institution/add" method="POST" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700">Nama Lembaga <span class="text-red-500">*</span></label>
-                <input type="text" name="name" required class="w-full border rounded-lg p-2.5 text-sm focus:ring-green-500 focus:border-green-500" placeholder="Contoh: SDN 05 Padang">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lembaga <span class="text-red-500">*</span></label>
+                <input type="text" name="name" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" placeholder="Contoh: SDN 05 Padang">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Alamat <span class="text-red-500">*</span></label>
-                <input type="text" name="address" required class="w-full border rounded-lg p-2.5 text-sm" placeholder="Alamat lengkap...">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Alamat <span class="text-red-500">*</span></label>
+                <input type="text" name="address" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" placeholder="Alamat lengkap...">
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Penanggung Jawab</label>
-                    <input type="text" name="contact_person" class="w-full border rounded-lg p-2.5 text-sm" placeholder="Nama PJ">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Penanggung Jawab</label>
+                    <input type="text" name="contact_person" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" placeholder="Nama PJ">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">No. HP</label>
-                    <input type="text" name="phone" class="w-full border rounded-lg p-2.5 text-sm" placeholder="0812...">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">No. HP</label>
+                    <input type="text" name="phone" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" placeholder="0812...">
                 </div>
             </div>
-            <div class="flex justify-end gap-2 pt-4 border-t mt-2">
-                <button type="button" onclick="closeModal('modalAddInst')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm font-medium">Batal</button>
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm">Simpan</button>
+            <div class="flex justify-end gap-2 pt-4 border-t mt-4">
+                <button type="button" onclick="closeModal('modalAddInst')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm font-medium transition-colors">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-md hover:shadow-lg transition-all transform active:scale-95 flex items-center gap-2">
+                    <i class="fas fa-save"></i> Simpan
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function openModal(id) { 
+        const modal = document.getElementById(id);
+        modal.classList.remove('hidden'); 
+        // Animasi masuk sederhana
+        const content = modal.querySelector('div.bg-white');
+        content.classList.add('animate-fade-in-down');
+    }
+    
+    function closeModal(id) { 
+        document.getElementById(id).classList.add('hidden'); 
+    }
+
+    // --- LOGIKA SUBMIT DENGAN ANIMASI SWEETALERT2 ---
+    document.getElementById('formAddInstitution').addEventListener('submit', function(e) {
+        e.preventDefault(); // Mencegah submit default browser
+
+        const form = this;
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Tampilkan Loading
+        Swal.fire({
+            title: 'Menyimpan...',
+            text: 'Mohon tunggu sebentar',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Kirim data via Fetch API
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Jika Berhasil
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Data lembaga berhasil ditambahkan.',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    window.location.reload(); // Reload halaman untuk update tabel
+                });
+            } else {
+                throw new Error('Gagal menyimpan data');
+            }
+        })
+        .catch(error => {
+            // Jika Gagal
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: 'Terjadi kesalahan saat menyimpan data.',
+            });
+            console.error('Error:', error);
+        });
+    });
 </script>
+
+<style>
+    @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-down {
+        animation: fadeInDown 0.3s ease-out;
+    }
+</style>
 
 <%- include('../partials/footer') %>
